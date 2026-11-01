@@ -9,45 +9,38 @@
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
   <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header Banner -->
-    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-semibold tracking-wide uppercase mb-2">
-          <span>Official Race Telemetry</span>
-          <span>•</span>
-          <span>36,306 Registered Runners</span>
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-[var(--foreground)]">
+            Jakarta Running Festival — Race Analytics &amp; Results Explorer
+          </h1>
+          <p class="text-sm text-[var(--muted-foreground)] mt-1">
+            Finish rates, DNF / Cut-off / DNS percentages, Bruto &amp; Netto finish times, average pace metrics, category podiums, and full 36,306-runner search. Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-medium text-emerald-500 hover:underline">https://results.scorenow.co.id</a>
+          </p>
         </div>
-        <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-[var(--foreground)]">
-          Jakarta Running Festival — Race Analytics &amp; Results Explorer
-        </h1>
-        <p class="text-sm text-[var(--muted-foreground)] mt-1">
-          Finish rates, DNF / Cut-off / DNS percentages, average pace metrics, category podiums, and full 36,306-runner search across Day 1 &amp; Day 2.
-        </p>
-      </div>
-      <!-- Theme Switch & Event Selector Pills -->
-      <div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-end xl:items-center gap-3">
-        <!-- Light / Dark Mode Switch -->
-        <div class="inline-flex items-center rounded-xl border border-[var(--border)] p-1 bg-[var(--background)] shrink-0" role="group" aria-label="Theme Switch">
+        <!-- Simple Light / Dark Mode Switcher -->
+        <div class="inline-flex items-center rounded-lg border border-[var(--border)] p-0.5 bg-[var(--background)] self-start shrink-0" role="group" aria-label="Theme Switch">
           <button
             id="themeLightBtn"
             onclick="setTheme('light')"
-            class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
-            title="Switch to Light Mode"
+            class="px-3 py-1 rounded-md text-xs font-medium transition"
           >
-            <span>☀️</span>
-            <span>Light</span>
+            Light
           </button>
           <button
             id="themeDarkBtn"
             onclick="setTheme('dark')"
-            class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
-            title="Switch to Dark Mode"
+            class="px-3 py-1 rounded-md text-xs font-medium transition"
           >
-            <span>🌙</span>
-            <span>Dark</span>
+            Dark
           </button>
         </div>
-        <!-- Event Selector Pills -->
-        <div id="eventTabs" class="flex flex-wrap gap-2"></div>
+      </div>
+      <!-- Event Selector Bar -->
+      <div class="pt-4 border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] shrink-0">Race Event Filter</span>
+        <div id="eventTabs" class="flex flex-wrap items-center gap-2"></div>
       </div>
     </div>
 
@@ -269,7 +262,10 @@
     </div>
 
     <!-- Footer Copyright -->
-    <footer class="bg-[var(--card)] border border-[var(--border)] rounded-2xl px-6 py-4 shadow-sm flex items-center justify-center text-xs text-[var(--muted-foreground)]">
+    <footer class="bg-[var(--card)] border border-[var(--border)] rounded-2xl px-6 py-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+      <div>
+        Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-semibold text-emerald-500 hover:underline">https://results.scorenow.co.id</a>
+      </div>
       <div class="font-medium text-[var(--foreground)]">
         &copy; 2026 <a href="https://www.instagram.com/gbudidarma/" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-500 hover:underline">@gbudidarma</a> All rights reserved.
       </div>
@@ -321,11 +317,11 @@
       const darkBtn = document.getElementById('themeDarkBtn');
       if (!lightBtn || !darkBtn) return;
       if (currentTheme === 'light') {
-        lightBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-emerald-600 text-white shadow-sm';
-        darkBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+        lightBtn.className = 'px-3 py-1 rounded-md text-xs font-semibold transition bg-emerald-600 text-white shadow-sm';
+        darkBtn.className = 'px-3 py-1 rounded-md text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
       } else {
-        darkBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-emerald-600 text-white shadow-sm';
-        lightBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+        darkBtn.className = 'px-3 py-1 rounded-md text-xs font-semibold transition bg-emerald-600 text-white shadow-sm';
+        lightBtn.className = 'px-3 py-1 rounded-md text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
       }
     }
 

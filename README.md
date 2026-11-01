@@ -2,6 +2,10 @@
 
 Complete official race telemetry, interactive HTML analytics dashboard, and OpenAPI 3.0.0 JSON datasets for the **Jakarta Running Festival (Day 1 & Day 2)** — covering **36,306 registered runners** and **30,602 official finishers** across all 4 distance categories.
 
+> **Data Source:** All official race results and checkpoint split timings are sourced from **[https://results.scorenow.co.id](https://results.scorenow.co.id)**
+> - **Day 1 (`myBCA Jakarta Half Marathon` & `Samsung Galaxy 5K`):** `https://results.scorenow.co.id/Results.aspx?CId=19723&RId=337`
+> - **Day 2 (`Hydroplus Marathon` & `Le Minerale 10K`):** `https://results.scorenow.co.id/Results.aspx?CId=19723&RId=338`
+
 ---
 
 ## Interactive Race Analytics Dashboard (`dashboard.html` / `index.html`)
@@ -13,17 +17,19 @@ This repository includes a self-contained, zero-dependency interactive HTML dash
 - **Local File:** Open `dashboard.html` or `index.html` directly in Chrome, Safari, Edge, or Firefox.
 
 ### Dashboard Features
-1. **Completion & Attrition Telemetry:** Real-time KPI cards and visual progress bars for **Finish Rate (`FINISHED %`)**, **Did Not Finish (`DNF %`)**, **Over Time Limit (`CUT %`)**, **Did Not Start (`DNS %`)**, **Average Pace (`/km`)**, and **Average/Median/Best Finish Time** across all events or filtered to a single race.
-2. **Event-by-Event Performance Matrix & Finish Time Histogram:** Compare all 4 races side-by-side or inspect finish-time distribution buckets and Male vs. Female average paces for any specific distance.
-3. **Country Joiners & Nationality Pie Charts:**
+1. **Light & Dark Mode Switcher:** Clean header toggle (`Light` | `Dark`) that switches the entire dashboard theme and persists your preference in `localStorage`.
+2. **Bruto & Netto Finish Times:** Displays both **Bruto Time** (official gun finish time) and **Netto Time** (chip time computed by summing each runner's checkpoint split intervals) across KPI cards, Event Performance Matrix, Category Winners & Podiums, Runner Search Table, and Split Detail Drawer.
+3. **Completion & Attrition Telemetry:** Real-time KPI cards and visual progress bars for **Finish Rate (`FINISHED %`)**, **Did Not Finish (`DNF %`)**, **Over Time Limit (`CUT %`)**, **Did Not Start (`DNS %`)**, **Average Pace (`/km`)**, and **Average/Best Finish Time** across all events or filtered to a single race.
+4. **Event-by-Event Performance Matrix & Finish Time Histogram:** Compare all 4 races side-by-side (`Avg Bruto`, `Avg Netto`, `Avg Pace`) or inspect finish-time distribution buckets and Male vs. Female average paces for any specific distance.
+5. **Country Joiners & Nationality Pie Charts:**
    - **All Joiners Pie Chart:** Domestic (`Indonesia`) vs. `International` participant split.
    - **International Joiners Pie Chart:** Share across foreign nations (`Malaysia`, `Japan`, `Singapore`, `Kenya`, `United States`, `Australia`, `China`, `India`, etc.).
    - **Top 10 Countries Table:** Click any country row or pie slice to filter the runner results table by nationality.
-4. **Collapsible Category Winners & Podiums (`1st`, `2nd`, `3rd`):** Full podium cards and `#1` winner summary tables for every category (`TOP 3 OPEN`, `TOP 5 OPEN`, `TOP 3 NATIONAL`, `OPEN`, `NATIONAL`, `MASTER NATIONAL 40-49`, `MASTER NATIONAL 50+`) across Male and Female divisions, with per-event **Collapse / Expand** and global **Expand All / Collapse All** controls.
-5. **All-Events Runner Search & Detailed Results Table (Footer):**
+6. **Collapsible Category Winners & Podiums (`1st`, `2nd`, `3rd`):** Full podium cards and `#1` winner summary tables (with both Bruto and Netto times) for every category (`TOP 3 OPEN`, `TOP 5 OPEN`, `TOP 3 NATIONAL`, `OPEN`, `NATIONAL`, `MASTER NATIONAL 40-49`, `MASTER NATIONAL 50+`) across Male and Female divisions, with per-event **Collapse / Expand** and global **Expand All / Collapse All** controls.
+7. **All-Events Runner Search & Detailed Results Table (Footer):**
    - Instant search across all **36,306 runners** by **Runner Name**, **Bib Number**, or **Country**.
    - Multi-filter controls for **Event**, **Category**, **Gender**, and **Status** (`FINISHED`, `DNF`, `CUT`, `DNS`, `DQ`, `QRY`).
-   - Displays **Overall Position / Status** and **Category Rank** (`🥇 #1`, `🥈 #2`, `🥉 #3`, `#4+`), defaulting to **10 rows per page** (`10`, `25`, `50`, or `100` selectable).
+   - Displays **Overall Position / Status**, **Category Rank** (`🥇 #1`, `🥈 #2`, `🥉 #3`, `#4+`), **Bruto Time**, **Netto Time**, and **Avg Pace**, defaulting to **10 rows per page** (`10`, `25`, `50`, or `100` selectable).
    - Click any runner row to open the **Checkpoint Split Times Drawer** (`KM 5`, `KM 10`, `KM 15`, `KM 20`, `KM 21.1`, `KM 25`, `KM 30`, `KM 35`, `KM 40`, and `FINISH`).
 
 ---
@@ -155,6 +161,7 @@ console.log(runner);
 
 ---
 
-## Author & Copyright
+## Data Source, Author & Copyright
 
-**© 2026 [@gbudidarma](https://www.instagram.com/gbudidarma/) All rights reserved.**
+- **Data Source:** [https://results.scorenow.co.id](https://results.scorenow.co.id)
+- **© 2026 [@gbudidarma](https://www.instagram.com/gbudidarma/) All rights reserved.**
