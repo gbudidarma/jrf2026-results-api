@@ -157,4 +157,4 @@ console.log(runner);
 
 ## Author & Copyright
 
-**© 2026 Gelar Budidarma Djamal. All rights reserved.**
+**© 2026 [@gbudidarma](https://www.instagram.com/gbudidarma/) All rights reserved.**
