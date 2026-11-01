@@ -34,6 +34,19 @@ def sec_to_pace(s_per_km: float | None) -> str:
     return f"{sec // 60}:{sec % 60:02d} /km"
 
 
+def compute_netto_sec(splits_dict: dict | None, split_cols: list[str]) -> int | None:
+    if not splits_dict or not split_cols:
+        return None
+    vals = [time_to_sec(splits_dict.get(c)) for c in split_cols]
+    if not vals or vals[-1] is None:
+        return None
+    if any(v is None for v in vals):
+        last_none = max(i for i, v in enumerate(vals) if v is None)
+        tail = vals[last_none + 1 :]
+        return sum(tail) if tail else None
+    return sum(vals)
+
+
 CATEGORY_ORDER = [
     "TOP 3 OPEN",
     "TOP 5 OPEN",
@@ -81,6 +94,7 @@ def compute_dashboard_data() -> dict:
     for ev in events_meta:
         slug = ev["event_slug"]
         dist = float(ev["distance_km"])
+        clean_splits = [s for s in ev["split_checkpoints"] if s != "RTW"]
         rows = [r for r in all_results if r["event_slug"] == slug]
         total = len(rows)
         counts = Counter(r["status"] for r in rows)
@@ -94,6 +108,9 @@ def compute_dashboard_data() -> dict:
 
         fin_rows = [r for r in rows if r["status"] == "FINISHED" and time_to_sec(r["time"])]
         fin_secs = [time_to_sec(r["time"]) for r in fin_rows]
+        netto_secs = [
+            ns for ns in (compute_netto_sec(r.get("splits"), clean_splits) for r in fin_rows) if ns is not None
+        ]
         male_secs = [time_to_sec(r["time"]) for r in fin_rows if r.get("gender") == "Male"]
         female_secs = [time_to_sec(r["time"]) for r in fin_rows if r.get("gender") == "Female"]
 
@@ -101,6 +118,10 @@ def compute_dashboard_data() -> dict:
         med_sec = statistics.median(fin_secs) if fin_secs else None
         min_sec = min(fin_secs) if fin_secs else None
         max_sec = max(fin_secs) if fin_secs else None
+
+        avg_netto_sec = statistics.mean(netto_secs) if netto_secs else None
+        med_netto_sec = statistics.median(netto_secs) if netto_secs else None
+        min_netto_sec = min(netto_secs) if netto_secs else None
 
         avg_pace_sec = (avg_sec / dist) if avg_sec else None
         med_pace_sec = (med_sec / dist) if med_sec else None
@@ -163,6 +184,7 @@ def compute_dashboard_data() -> dict:
             podium = []
             for rank_idx, runner in enumerate(group_finishers[:3], start=1):
                 r_sec = time_to_sec(runner["time"])
+                r_netto_sec = compute_netto_sec(runner.get("splits"), clean_splits)
                 podium.append(
                     {
                         "category_rank": rank_idx,
@@ -171,7 +193,9 @@ def compute_dashboard_data() -> dict:
                         "name": runner["name"],
                         "country": runner.get("country") or "-",
                         "time": runner["time"],
+                        "netto_time": sec_to_hms(r_netto_sec) if r_netto_sec is not None else runner["time"],
                         "pace": sec_to_pace(r_sec / dist) if r_sec else "-",
+                        "netto_pace": sec_to_pace(r_netto_sec / dist) if r_netto_sec else (sec_to_pace(r_sec / dist) if r_sec else "-"),
                     }
                 )
             categories_data.append(
@@ -213,6 +237,9 @@ def compute_dashboard_data() -> dict:
                 "avg_time": sec_to_hms(avg_sec),
                 "median_time": sec_to_hms(med_sec),
                 "best_time": sec_to_hms(min_sec),
+                "avg_netto_time": sec_to_hms(avg_netto_sec),
+                "median_netto_time": sec_to_hms(med_netto_sec),
+                "best_netto_time": sec_to_hms(min_netto_sec),
                 "avg_pace": sec_to_pace(avg_pace_sec),
                 "median_pace": sec_to_pace(med_pace_sec),
                 "best_pace": sec_to_pace(best_pace_sec),
@@ -227,8 +254,9 @@ def compute_dashboard_data() -> dict:
 
     # Encode all 36,306 runners into a compact array for instant client-side search & pagination
     # Format per runner:
-    # [0: event_idx, 1: pos_or_null, 2: status_str, 3: bib_no, 4: name, 5: time_str,
-    #  6: pace_str, 7: category, 8: gender, 9: country, 10: splits_array, 11: is_podium (1/0), 12: cat_rank]
+    # [0: event_idx, 1: pos_or_null, 2: status_str, 3: bib_no, 4: name, 5: bruto_time_str,
+    #  6: bruto_pace_str, 7: category, 8: gender, 9: country, 10: splits_array, 11: is_podium (1/0),
+    #  12: cat_rank, 13: netto_time_str, 14: netto_pace_str]
     compact_runners = []
     for r in all_results:
         ev_idx = event_slug_to_idx[r["event_slug"]]
@@ -238,6 +266,9 @@ def compute_dashboard_data() -> dict:
         t_str = r.get("time") or ""
         t_sec = time_to_sec(t_str) if r["status"] == "FINISHED" else None
         p_str = sec_to_pace(t_sec / dist).replace(" /km", "") if t_sec else ""
+        netto_sec = compute_netto_sec(r.get("splits"), split_cols) if r["status"] == "FINISHED" else None
+        netto_str = sec_to_hms(netto_sec) if netto_sec is not None else ""
+        netto_p_str = sec_to_pace(netto_sec / dist).replace(" /km", "") if netto_sec else p_str
         splits_arr = [r["splits"].get(c) or "" for c in split_cols]
         bib = r["bib_no"]
         pos = r["position"]
@@ -258,6 +289,8 @@ def compute_dashboard_data() -> dict:
                 splits_arr,
                 is_pod,
                 cat_rk,
+                netto_str,
+                netto_p_str,
             ]
         )
 
@@ -496,7 +529,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <th class="py-3 px-2.5 font-semibold">Category</th>
               <th class="py-3 px-2 font-semibold">Gender</th>
               <th class="py-3 px-2.5 font-semibold">Country</th>
-              <th class="py-3 px-2.5 font-semibold text-right">Finish Time</th>
+              <th class="py-3 px-2.5 font-semibold text-right">Bruto Time</th>
+              <th class="py-3 px-2.5 font-semibold text-right">Netto Time</th>
               <th class="py-3 px-2.5 font-semibold text-right">Avg Pace</th>
               <th class="py-3 px-3 font-semibold">Checkpoint Splits</th>
             </tr>
@@ -718,10 +752,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <strong>${escapeHtml(ev.name)}</strong> (${ev.dist} KM • ${escapeHtml(ev.day)}) • Category: <strong>${escapeHtml(r[7])}</strong> • Gender: <strong>${escapeHtml(r[8])}</strong> • Country: <strong>${escapeHtml(r[9])}</strong>
             </div>
           </div>
-          <div class="flex items-center gap-4">
-            <div class="text-right">
-              <div class="text-xs text-[var(--muted-foreground)]">Finish Time / Pace</div>
-              <div class="text-sm font-mono font-bold text-emerald-500">${escapeHtml(r[5] || '—')} ${r[6] ? `(${escapeHtml(r[6])} /km)` : ''}</div>
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="text-right px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <div class="text-xs text-[var(--muted-foreground)]">Bruto Finish Time</div>
+              <div class="text-sm font-mono font-bold text-[var(--foreground)]">${escapeHtml(r[5] || '—')} ${r[6] ? `<span class="text-xs font-normal text-[var(--muted-foreground)]">(${escapeHtml(r[6])} /km)</span>` : ''}</div>
+            </div>
+            <div class="text-right px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+              <div class="text-xs text-emerald-500 font-medium">Netto Finish Time (Splits)</div>
+              <div class="text-sm font-mono font-bold text-emerald-500">${escapeHtml(r[13] || '—')} ${r[14] ? `<span class="text-xs font-normal text-sky-500">(${escapeHtml(r[14])} /km)</span>` : ''}</div>
             </div>
             <button
               onclick="document.getElementById('runnerDetailDrawer').classList.add('hidden')"
@@ -732,7 +770,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           </div>
         </div>
         <div>
-          <div class="text-xs font-semibold text-[var(--muted-foreground)] mb-2">Checkpoint Split Times (Segment Intervals)</div>
+          <div class="text-xs font-semibold text-[var(--muted-foreground)] mb-2">Checkpoint Split Times (Segment Intervals • Sum = Netto Finish Time: <span class="font-mono text-emerald-500">${escapeHtml(r[13] || '—')}</span>)</div>
           <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">${splitsHtml}</div>
         </div>
       `;
@@ -760,7 +798,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (!pageSlice.length) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="11" class="py-8 text-center text-sm text-[var(--muted-foreground)]">
+            <td colspan="12" class="py-8 text-center text-sm text-[var(--muted-foreground)]">
               No runners match your search filters. Try clearing or adjusting the search terms.
             </td>
           </tr>
@@ -794,8 +832,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               }">${escapeHtml(r[8])}</span>
             </td>
             <td class="py-2.5 px-2.5 text-[var(--muted-foreground)] whitespace-nowrap">${escapeHtml(r[9])}</td>
-            <td class="py-2.5 px-2.5 text-right font-mono font-bold text-emerald-500 whitespace-nowrap">${escapeHtml(r[5] || '—')}</td>
-            <td class="py-2.5 px-2.5 text-right font-mono text-sky-500 whitespace-nowrap">${r[6] ? `${escapeHtml(r[6])} /km` : '—'}</td>
+            <td class="py-2.5 px-2.5 text-right font-mono font-semibold text-[var(--foreground)] whitespace-nowrap">${escapeHtml(r[5] || '—')}</td>
+            <td class="py-2.5 px-2.5 text-right font-mono font-bold text-emerald-500 whitespace-nowrap">${escapeHtml(r[13] || '—')}</td>
+            <td class="py-2.5 px-2.5 text-right font-mono text-sky-500 whitespace-nowrap">${r[14] ? `${escapeHtml(r[14])} /km` : '—'}</td>
             <td class="py-2.5 px-3"><div class="flex flex-wrap gap-1">${splitsPreview}</div></td>
           </tr>
         `;
@@ -870,9 +909,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           pct: 100
         },
         {
-          title: isAll ? 'Total Finishers' : 'Average Finish Time',
+          title: isAll ? 'Total Finishers' : 'Avg Finish Time (Bruto / Netto)',
           value: isAll ? fmtNum(stats.finished) : stats.avg_time,
-          sub: isAll ? `Across 4 Race Events (Day 1 & Day 2)` : `Median: ${stats.median_time} • Best: ${stats.best_time}`,
+          sub: isAll ? `Across 4 Race Events (Day 1 & Day 2)` : `Netto Avg: ${stats.avg_netto_time} • Best: ${stats.best_netto_time}`,
           badge: isAll ? 'JRF 2026 Dataset' : stats.race_day,
           color: 'text-indigo-500',
           barColor: 'bg-indigo-500',
@@ -978,7 +1017,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                   <th class="py-2.5 px-2 font-semibold text-right text-amber-500">DNF %</th>
                   <th class="py-2.5 px-2 font-semibold text-right text-orange-500">CUT %</th>
                   <th class="py-2.5 px-2 font-semibold text-right text-rose-500">DNS %</th>
-                  <th class="py-2.5 px-2 font-semibold text-right">Avg Time</th>
+                  <th class="py-2.5 px-2 font-semibold text-right">Avg Bruto</th>
+                  <th class="py-2.5 px-2 font-semibold text-right text-emerald-500">Avg Netto</th>
                   <th class="py-2.5 pl-2 font-semibold text-right text-sky-500">Avg Pace</th>
                 </tr>
               </thead>
@@ -1006,7 +1046,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                       <span class="font-semibold text-rose-500">${ev.dns_pct}%</span>
                       <div class="text-xs text-[var(--muted-foreground)]">${fmtNum(ev.dns)}</div>
                     </td>
-                    <td class="py-3 px-2 text-right font-mono font-medium">${ev.avg_time}</td>
+                    <td class="py-3 px-2 text-right font-mono font-medium text-[var(--foreground)]">${ev.avg_time}</td>
+                    <td class="py-3 px-2 text-right font-mono font-bold text-emerald-500">${ev.avg_netto_time}</td>
                     <td class="py-3 pl-2 text-right font-mono font-semibold text-sky-500">${ev.avg_pace}</td>
                   </tr>
                 `).join('')}
@@ -1122,7 +1163,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                       <th class="py-2.5 px-2 font-semibold">#1 Winner Name</th>
                       <th class="py-2.5 px-2 font-semibold">Bib No</th>
                       <th class="py-2.5 px-2 font-semibold">Country</th>
-                      <th class="py-2.5 px-2 font-semibold text-right">Winning Time</th>
+                      <th class="py-2.5 px-2 font-semibold text-right">Bruto Time</th>
+                      <th class="py-2.5 px-2 font-semibold text-right">Netto Time</th>
                       <th class="py-2.5 px-2 font-semibold text-right">Winner Pace</th>
                       <th class="py-2.5 px-2 font-semibold text-right">Cat Finishers</th>
                       <th class="py-2.5 px-3 font-semibold text-right">Cat Avg Pace</th>
@@ -1142,8 +1184,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                           <td class="py-2.5 px-2 font-bold text-[var(--foreground)]">🏆 ${w ? w.name : '-'}</td>
                           <td class="py-2.5 px-2 font-mono text-[var(--muted-foreground)]">${w ? w.bib_no : '-'}</td>
                           <td class="py-2.5 px-2 text-[var(--muted-foreground)]">${w ? w.country : '-'}</td>
-                          <td class="py-2.5 px-2 text-right font-mono font-bold text-emerald-500">${w ? w.time : '-'}</td>
-                          <td class="py-2.5 px-2 text-right font-mono text-sky-500">${w ? w.pace : '-'}</td>
+                          <td class="py-2.5 px-2 text-right font-mono font-semibold text-[var(--foreground)]">${w ? w.time : '-'}</td>
+                          <td class="py-2.5 px-2 text-right font-mono font-bold text-emerald-500">${w ? w.netto_time : '-'}</td>
+                          <td class="py-2.5 px-2 text-right font-mono text-sky-500">${w ? w.netto_pace : '-'}</td>
                           <td class="py-2.5 px-2 text-right text-[var(--muted-foreground)]">${fmtNum(c.finishers_count)} / ${fmtNum(c.total_entered)} (${c.finish_pct}%)</td>
                           <td class="py-2.5 px-3 text-right font-mono text-[var(--muted-foreground)]">${c.avg_pace}</td>
                         </tr>
@@ -1212,9 +1255,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                               Bib: <span class="font-mono">${p.bib_no}</span> • ${p.country} ${p.overall_pos ? '• Overall #' + p.overall_pos : ''}
                             </div>
                           </div>
-                          <div class="text-right shrink-0">
-                            <div class="font-mono font-bold text-emerald-500">${p.time}</div>
-                            <div class="font-mono text-xs text-[var(--muted-foreground)]">${p.pace}</div>
+                          <div class="text-right shrink-0 space-y-0.5">
+                            <div class="font-mono text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${p.time}</span></div>
+                            <div class="font-mono text-xs text-emerald-500">Netto: <span class="font-bold">${p.netto_time}</span></div>
+                            <div class="font-mono text-xs text-sky-500">${p.netto_pace}</div>
                           </div>
                         </div>
                       `;

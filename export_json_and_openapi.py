@@ -67,6 +67,35 @@ EVENTS_CONFIG = [
 ]
 
 
+def time_to_sec(t: str | None) -> int | None:
+    if not t:
+        return None
+    parts = [int(x) for x in t.strip().split(":") if x.strip().isdigit()]
+    if len(parts) == 3:
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+    if len(parts) == 2:
+        return parts[0] * 60 + parts[1]
+    return None
+
+
+def sec_to_hms(s: int | None) -> str | None:
+    if s is None or s <= 0:
+        return None
+    return f"{s // 3600:02d}:{(s % 3600) // 60:02d}:{s % 60:02d}"
+
+
+def compute_netto_time(splits: dict, split_cols: list[str]) -> str | None:
+    clean_cols = [c for c in split_cols if c != "RTW"]
+    vals = [time_to_sec(splits.get(c)) for c in clean_cols]
+    if not vals or vals[-1] is None:
+        return None
+    if any(v is None for v in vals):
+        last_none = max(i for i, v in enumerate(vals) if v is None)
+        tail = vals[last_none + 1 :]
+        return sec_to_hms(sum(tail)) if tail else None
+    return sec_to_hms(sum(vals))
+
+
 def parse_position_and_status(raw_pos: str, finish_time: str) -> tuple[int | None, str]:
     """Convert raw Pos value ('1', '1,000', 'DNS', 'DNF', 'CUT', 'DQ', 'QRY') into (position_int, status_str)."""
     cleaned = raw_pos.replace(",", "").strip()
@@ -92,6 +121,8 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
                 val = (row.get(col) or "").strip()
                 splits[col] = val if val else None
 
+            netto_time = compute_netto_time(splits, cfg["split_columns"]) if status == "FINISHED" else None
+
             record = {
                 "event_slug": cfg["event_slug"],
                 "event_name": cfg["event_name"],
@@ -101,6 +132,8 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
                 "bib_no": (row.get("Bib No") or "").strip(),
                 "name": (row.get("Name") or "").strip(),
                 "time": finish_time,
+                "bruto_time": finish_time,
+                "netto_time": netto_time,
                 "category": (row.get("Category") or "").strip() or None,
                 "gender": (row.get("Gender") or "").strip() or None,
                 "country": (row.get("Country") or "").strip() or None,
@@ -128,7 +161,7 @@ def build_openapi_spec(event_summaries: list[dict], sample_runner: dict) -> dict
         },
         "servers": [
             {
-                "url": "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main",
+                "url": "https://raw.githubusercontent.com/gbudidarma/jrf2026-results-api/main",
                 "description": "GitHub Raw Static JSON Server",
             }
         ],
@@ -355,6 +388,8 @@ def build_openapi_spec(event_summaries: list[dict], sample_runner: dict) -> dict
                         "bib_no": {"type": "string", "example": "A14328"},
                         "name": {"type": "string", "example": "KIPRONO KOECH"},
                         "time": {"type": "string", "nullable": True, "example": "02:15:41"},
+                        "bruto_time": {"type": "string", "nullable": True, "example": "02:15:41"},
+                        "netto_time": {"type": "string", "nullable": True, "example": "02:15:37"},
                         "category": {"type": "string", "nullable": True, "example": "TOP 3 OPEN"},
                         "gender": {"type": "string", "nullable": True, "example": "Male"},
                         "country": {"type": "string", "nullable": True, "example": "Kenya"},
@@ -373,7 +408,6 @@ def build_openapi_spec(event_summaries: list[dict], sample_runner: dict) -> dict
                                 "KM 30": {"type": "string", "nullable": True},
                                 "KM 35": {"type": "string", "nullable": True},
                                 "KM 40": {"type": "string", "nullable": True},
-                                "RTW": {"type": "string", "nullable": True},
                                 "FINISH": {"type": "string", "nullable": True},
                             },
                             "example": sample_runner["splits"],
