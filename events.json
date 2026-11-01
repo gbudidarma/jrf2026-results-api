@@ -1,0 +1,69 @@
+{
+  "competition": "Jakarta Running Festival",
+  "cid": 19723,
+  "total_events": 4,
+  "total_participants": 36306,
+  "events": [
+    {
+      "event_slug": "mybca_jakarta_half_marathon",
+      "event_name": "myBCA Jakarta Half Marathon",
+      "race_day": "Day 1",
+      "distance_km": 21.1,
+      "total_participants": 14684,
+      "finishers_count": 12684,
+      "split_checkpoints": [
+        "KM 5",
+        "KM 10",
+        "KM 15",
+        "KM 20",
+        "FINISH"
+      ]
+    },
+    {
+      "event_slug": "samsung_galaxy_5k",
+      "event_name": "Samsung Galaxy 5K",
+      "race_day": "Day 1",
+      "distance_km": 5.0,
+      "total_participants": 4761,
+      "finishers_count": 4048,
+      "split_checkpoints": [
+        "KM 3.4",
+        "FINISH"
+      ]
+    },
+    {
+      "event_slug": "hydroplus_marathon",
+      "event_name": "Hydroplus Marathon",
+      "race_day": "Day 2",
+      "distance_km": 42.195,
+      "total_participants": 4420,
+      "finishers_count": 2637,
+      "split_checkpoints": [
+        "KM 5",
+        "KM 10",
+        "KM 15",
+        "KM 20",
+        "KM 21.1",
+        "KM 25",
+        "KM 30",
+        "KM 35",
+        "KM 40",
+        "FINISH"
+      ]
+    },
+    {
+      "event_slug": "le_minerale_10k",
+      "event_name": "Le Minerale 10K",
+      "race_day": "Day 2",
+      "distance_km": 10.0,
+      "total_participants": 12441,
+      "finishers_count": 11233,
+      "split_checkpoints": [
+        "KM 3.9",
+        "KM 8.8",
+        "RTW",
+        "FINISH"
+      ]
+    }
+  ]
+}
