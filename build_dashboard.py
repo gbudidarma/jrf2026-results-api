@@ -349,8 +349,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           Finish rates, DNF / Cut-off / DNS percentages, average pace metrics, category podiums, and full 36,306-runner search across Day 1 &amp; Day 2.
         </p>
       </div>
-      <!-- Event Selector Pills -->
-      <div id="eventTabs" class="flex flex-wrap gap-2"></div>
+      <!-- Theme Switch & Event Selector Pills -->
+      <div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-end xl:items-center gap-3">
+        <!-- Light / Dark Mode Switch -->
+        <div class="inline-flex items-center rounded-xl border border-[var(--border)] p-1 bg-[var(--background)] shrink-0" role="group" aria-label="Theme Switch">
+          <button
+            id="themeLightBtn"
+            onclick="setTheme('light')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+            title="Switch to Light Mode"
+          >
+            <span>☀️</span>
+            <span>Light</span>
+          </button>
+          <button
+            id="themeDarkBtn"
+            onclick="setTheme('dark')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+            title="Switch to Dark Mode"
+          >
+            <span>🌙</span>
+            <span>Dark</span>
+          </button>
+        </div>
+        <!-- Event Selector Pills -->
+        <div id="eventTabs" class="flex flex-wrap gap-2"></div>
+      </div>
     </div>
 
     <!-- Top KPI Cards -->
@@ -580,32 +604,68 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 
   <script>
-    (function ensureStandaloneTheme() {
-      const root = document.documentElement;
-      const bg = getComputedStyle(root).getPropertyValue('--background').trim();
-      if (!bg) {
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const vars = prefersDark
-          ? {
-              '--background': '#0b0f19',
-              '--card': '#111827',
-              '--foreground': '#f9fafb',
-              '--muted-foreground': '#9ca3af',
-              '--border': '#1f2937',
-              '--primary': '#10b981',
-              '--secondary': '#1e293b'
-            }
-          : {
-              '--background': '#f8fafc',
-              '--card': '#ffffff',
-              '--foreground': '#0f172a',
-              '--muted-foreground': '#64748b',
-              '--border': '#e2e8f0',
-              '--primary': '#059669',
-              '--secondary': '#f1f5f9'
-            };
-        Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
+    const THEME_PALETTES = {
+      dark: {
+        '--background': '#0b0f19',
+        '--card': '#111827',
+        '--foreground': '#f9fafb',
+        '--muted-foreground': '#9ca3af',
+        '--border': '#1f2937',
+        '--primary': '#10b981',
+        '--secondary': '#1e293b'
+      },
+      light: {
+        '--background': '#f8fafc',
+        '--card': '#ffffff',
+        '--foreground': '#0f172a',
+        '--muted-foreground': '#64748b',
+        '--border': '#e2e8f0',
+        '--primary': '#059669',
+        '--secondary': '#f1f5f9'
       }
+    };
+
+    let currentTheme = 'dark';
+
+    function setTheme(mode) {
+      currentTheme = mode === 'light' ? 'light' : 'dark';
+      const root = document.documentElement;
+      const palette = THEME_PALETTES[currentTheme];
+      Object.entries(palette).forEach(([k, v]) => {
+        root.style.setProperty(k, v);
+        document.body.style.setProperty(k, v);
+      });
+      root.style.colorScheme = currentTheme;
+      try {
+        localStorage.setItem('jrf2026_theme', currentTheme);
+      } catch (e) {}
+      updateThemeButtons();
+    }
+
+    function updateThemeButtons() {
+      const lightBtn = document.getElementById('themeLightBtn');
+      const darkBtn = document.getElementById('themeDarkBtn');
+      if (!lightBtn || !darkBtn) return;
+      if (currentTheme === 'light') {
+        lightBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-emerald-600 text-white shadow-sm';
+        darkBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+      } else {
+        darkBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-emerald-600 text-white shadow-sm';
+        lightBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+      }
+    }
+
+    (function initTheme() {
+      let saved = null;
+      try {
+        saved = localStorage.getItem('jrf2026_theme');
+      } catch (e) {}
+      if (saved === 'light' || saved === 'dark') {
+        setTheme(saved);
+        return;
+      }
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
     })();
 
     const DASHBOARD_DATA = __DASHBOARD_JSON__;
