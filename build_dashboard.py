@@ -58,6 +58,41 @@ CATEGORY_ORDER = [
     "PACER",
 ]
 
+EVENT_BUCKET_CONFIG = {
+    "mybca_jakarta_half_marathon": {
+        "start_sec": 1 * 3600,
+        "cot_sec": 3 * 3600 + 45 * 60,
+        "step_sec": 15 * 60,
+        "cot_label": "03:45:00",
+        "over_cot_label": "> 3:45:00",
+        "step_label": "15-min range",
+    },
+    "hydroplus_marathon": {
+        "start_sec": 2 * 3600,
+        "cot_sec": 5 * 3600,
+        "step_sec": 30 * 60,
+        "cot_label": "05:00:00",
+        "over_cot_label": "> 5:00:00",
+        "step_label": "30-min range",
+    },
+    "le_minerale_10k": {
+        "start_sec": 30 * 60,
+        "cot_sec": 2 * 3600,
+        "step_sec": 10 * 60,
+        "cot_label": "02:00:00",
+        "over_cot_label": "> 2:00:00",
+        "step_label": "10-min range",
+    },
+    "samsung_galaxy_5k": {
+        "start_sec": 10 * 60,
+        "cot_sec": 1 * 3600,
+        "step_sec": 5 * 60,
+        "cot_label": "01:00:00",
+        "over_cot_label": "> 1:00:00",
+        "step_label": "5-min range",
+    },
+}
+
 
 def compute_dashboard_data() -> dict:
     raw = json.loads((WORKSPACE / "jrf_all_results.json").read_text(encoding="utf-8"))
@@ -132,25 +167,43 @@ def compute_dashboard_data() -> dict:
         all_paces.extend([s / dist for s in fin_secs])
 
         buckets = []
-        if fin_secs and min_sec is not None and max_sec is not None:
-            bucket_count = 8
-            span = max(max_sec - min_sec, bucket_count)
-            step = span / bucket_count
-            b_counts = [0] * bucket_count
-            for s in fin_secs:
-                idx = min(int((s - min_sec) / step), bucket_count - 1)
-                b_counts[idx] += 1
+        b_cfg = EVENT_BUCKET_CONFIG.get(slug)
+        if fin_secs and b_cfg:
+            b_start_sec = b_cfg["start_sec"]
+            b_cot_sec = b_cfg["cot_sec"]
+            b_step_sec = b_cfg["step_sec"]
+            bucket_count = int((b_cot_sec - b_start_sec) // b_step_sec)
             for i in range(bucket_count):
-                b_start = min_sec + i * step
-                b_end = min_sec + (i + 1) * step
+                b_start = b_start_sec + i * b_step_sec
+                b_end = b_start_sec + (i + 1) * b_step_sec
+                min_s = 0 if i == 0 else b_start
+                max_s = b_cot_sec if i == bucket_count - 1 else (b_end - 1)
+                cnt = sum(1 for s in fin_secs if min_s <= s <= max_s)
                 buckets.append(
                     {
                         "label": f"{sec_to_hms(b_start)[:5]}–{sec_to_hms(b_end)[:5]}",
                         "pace_label": f"{sec_to_pace(b_start / dist)} – {sec_to_pace(b_end / dist)}",
-                        "count": b_counts[i],
-                        "pct": round(b_counts[i] * 100.0 / len(fin_secs), 1),
+                        "count": cnt,
+                        "pct": round(cnt * 100.0 / len(fin_secs), 1),
+                        "min_sec": min_s,
+                        "max_sec": max_s,
+                        "is_over_cot": False,
                     }
                 )
+            over_min_s = b_cot_sec + 1
+            over_max_s = 999999
+            over_cnt = sum(1 for s in fin_secs if s >= over_min_s)
+            buckets.append(
+                {
+                    "label": b_cfg["over_cot_label"],
+                    "pace_label": f"> {sec_to_pace(b_cot_sec / dist)}",
+                    "count": over_cnt,
+                    "pct": round(over_cnt * 100.0 / len(fin_secs), 1),
+                    "min_sec": over_min_s,
+                    "max_sec": over_max_s,
+                    "is_over_cot": True,
+                }
+            )
 
         cat_groups = defaultdict(list)
         cat_all_rows = defaultdict(list)
@@ -247,6 +300,8 @@ def compute_dashboard_data() -> dict:
                 "female_avg_pace": sec_to_pace(female_pace_sec),
                 "male_finishers": len(male_secs),
                 "female_finishers": len(female_secs),
+                "cot_label": b_cfg["cot_label"] if b_cfg else "-",
+                "step_label": b_cfg["step_label"] if b_cfg else "-",
                 "buckets": buckets,
                 "categories": categories_data,
             }
@@ -453,12 +508,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- All-Events Detailed Runner Search & Results Table -->
-    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
+    <div id="runnerTableSection" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="text-lg font-bold text-[var(--foreground)]">All-Events Race Results — All Runners (With Podium)</h2>
             <span id="runnerResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500">36,306 runners</span>
+            <span id="activeBucketFilterBadge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/15 text-sky-500 border border-sky-500/30"></span>
             <span class="px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)]">Includes All Podium Winners &amp; General Field</span>
           </div>
           <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
@@ -680,6 +736,72 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     let runnerPage = 1;
     let runnerPageSize = 10;
     let filteredRunners = [];
+    let activeBucketFilter = null;
+
+    function parseTimeSec(t) {
+      if (!t) return null;
+      const p = String(t).trim().split(':').map(Number);
+      if (p.length === 3 && p.every(n => !isNaN(n))) return p[0] * 3600 + p[1] * 60 + p[2];
+      if (p.length === 2 && p.every(n => !isNaN(n))) return p[0] * 60 + p[1];
+      return null;
+    }
+
+    function updateBucketFilterBadge() {
+      const badge = document.getElementById('activeBucketFilterBadge');
+      if (!badge) return;
+      if (!activeBucketFilter) {
+        badge.classList.add('hidden');
+        badge.innerHTML = '';
+        return;
+      }
+      badge.classList.remove('hidden');
+      badge.innerHTML = `
+        <span>Finish Range: ${escapeHtml(activeBucketFilter.label)}</span>
+        <button onclick="clearBucketFilter()" class="hover:opacity-75 font-bold" title="Clear Finish Time Range Filter">✕</button>
+      `;
+    }
+
+    function selectBucketFilter(bucketIdx) {
+      const { isAll, stats } = getActiveContext();
+      if (isAll || !stats || !stats.buckets || !stats.buckets[bucketIdx]) return;
+      const b = stats.buckets[bucketIdx];
+
+      if (
+        activeBucketFilter &&
+        activeBucketFilter.eventSlug === stats.event_slug &&
+        activeBucketFilter.bucketIdx === bucketIdx
+      ) {
+        clearBucketFilter();
+        return;
+      }
+
+      const evIdx = DASHBOARD_DATA.event_lookup.findIndex(e => e.slug === stats.event_slug);
+      activeBucketFilter = {
+        eventSlug: stats.event_slug,
+        eventIdx: evIdx,
+        bucketIdx: bucketIdx,
+        label: b.label,
+        minSec: b.min_sec,
+        maxSec: b.max_sec
+      };
+      if (evIdx >= 0) {
+        runnerEventFilter = String(evIdx);
+        document.getElementById('runnerEventSelect').value = runnerEventFilter;
+      }
+      runnerStatusFilter = 'FINISHED';
+      document.getElementById('runnerStatusSelect').value = 'FINISHED';
+      updateBucketFilterBadge();
+      renderStatusAndRightPanel();
+      filterRunnersList();
+      document.getElementById('runnerTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function clearBucketFilter() {
+      activeBucketFilter = null;
+      updateBucketFilterBadge();
+      renderStatusAndRightPanel();
+      filterRunnersList();
+    }
 
     // Non-Podium Runner Table State (Excludes all podium winners: r[11] === 0)
     let npQuery = '';
@@ -746,6 +868,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         if (runnerCategoryFilter !== 'ALL' && r[7] !== runnerCategoryFilter) return false;
         if (runnerGenderFilter !== 'ALL' && r[8] !== runnerGenderFilter) return false;
         if (runnerStatusFilter !== 'ALL' && r[2] !== runnerStatusFilter) return false;
+        if (activeBucketFilter) {
+          if (r[2] !== 'FINISHED') return false;
+          if (activeBucketFilter.eventIdx >= 0 && r[0] !== activeBucketFilter.eventIdx) return false;
+          const bSec = parseTimeSec(r[5]);
+          if (bSec === null || bSec < activeBucketFilter.minSec || bSec > activeBucketFilter.maxSec) return false;
+        }
         if (q) {
           const bib = (r[3] || '').toLowerCase();
           const name = (r[4] || '').toLowerCase();
@@ -1113,24 +1241,45 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         `;
       } else {
         rightTitle.textContent = `${stats.event_name} — Finish Time & Pace Distribution`;
-        rightSubtitle.textContent = `Distribution across ${fmtNum(stats.finished)} official finishers (Fastest: ${stats.best_time} • Median: ${stats.median_time})`;
+        rightSubtitle.textContent = `COT: ${stats.cot_label} (${stats.step_label}) • Click any bar to filter runners in that finish time range`;
         const maxBucket = Math.max(...stats.buckets.map(b => b.count), 1);
+        const hasActiveBar = activeBucketFilter && activeBucketFilter.eventSlug === stats.event_slug;
         rightContent.innerHTML = `
-          <div class="space-y-2.5">
-            ${stats.buckets.map(b => `
-              <div class="grid grid-cols-12 items-center gap-2 text-xs">
-                <div class="col-span-3 font-mono text-[var(--foreground)] font-medium">${b.label}</div>
-                <div class="col-span-6">
-                  <div class="w-full h-5 bg-[var(--background)] rounded-lg overflow-hidden border border-[var(--border)]">
-                    <div class="h-full bg-emerald-500/80 rounded-lg" style="width: ${(b.count / maxBucket) * 100}%"></div>
+          ${hasActiveBar ? `
+            <div class="flex items-center justify-between px-3 py-1.5 mb-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs">
+              <span class="font-medium text-emerald-500">Active Filter: <strong>${escapeHtml(activeBucketFilter.label)}</strong></span>
+              <button onclick="clearBucketFilter()" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] font-medium hover:opacity-80">Clear Filter ✕</button>
+            </div>
+          ` : ''}
+          <div class="space-y-1.5">
+            ${stats.buckets.map((b, bIdx) => {
+              const isSelected = hasActiveBar && activeBucketFilter.bucketIdx === bIdx;
+              const rowCls = isSelected
+                ? 'bg-emerald-500/15 ring-1 ring-emerald-500 rounded-lg px-2 py-1'
+                : 'hover:bg-[var(--background)] rounded-lg px-2 py-1';
+              const barColor = b.is_over_cot
+                ? (isSelected ? 'bg-amber-500' : 'bg-amber-500/80')
+                : (isSelected ? 'bg-emerald-500' : 'bg-emerald-500/80');
+              const labelColor = b.is_over_cot ? 'text-amber-500 font-semibold' : 'text-[var(--foreground)] font-medium';
+              return `
+                <div
+                  onclick="selectBucketFilter(${bIdx})"
+                  class="grid grid-cols-12 items-center gap-2 text-xs cursor-pointer transition select-none ${rowCls}"
+                  title="Click to filter runners in ${b.label} (${b.pace_label}): ${fmtNum(b.count)} runners (${b.pct}%)"
+                >
+                  <div class="col-span-3 font-mono ${labelColor}">${escapeHtml(b.label)}</div>
+                  <div class="col-span-6">
+                    <div class="w-full h-4 bg-[var(--background)] rounded-lg overflow-hidden border border-[var(--border)]">
+                      <div class="h-full ${barColor} rounded-lg transition-all" style="width: ${b.count > 0 ? Math.max(2, (b.count / maxBucket) * 100) : 0}%"></div>
+                    </div>
+                  </div>
+                  <div class="col-span-3 text-right">
+                    <span class="font-semibold text-[var(--foreground)]">${fmtNum(b.count)}</span>
+                    <span class="text-[var(--muted-foreground)] ml-1">(${b.pct}%)</span>
                   </div>
                 </div>
-                <div class="col-span-3 text-right">
-                  <span class="font-semibold text-[var(--foreground)]">${fmtNum(b.count)}</span>
-                  <span class="text-[var(--muted-foreground)] ml-1">(${b.pct}%)</span>
-                </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         `;
       }
@@ -1336,6 +1485,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     function selectEvent(slug) {
       selectedEventSlug = slug;
+      activeBucketFilter = null;
+      updateBucketFilterBadge();
       if (slug === 'ALL') {
         runnerEventFilter = 'ALL';
       } else {
@@ -1589,6 +1740,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     });
     document.getElementById('runnerEventSelect').addEventListener('change', e => {
       runnerEventFilter = e.target.value;
+      activeBucketFilter = null;
+      updateBucketFilterBadge();
+      renderStatusAndRightPanel();
       filterRunnersList();
     });
     document.getElementById('runnerCategorySelect').addEventListener('change', e => {
@@ -1627,6 +1781,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       runnerCategoryFilter = 'ALL';
       runnerGenderFilter = 'ALL';
       runnerStatusFilter = 'ALL';
+      activeBucketFilter = null;
+      updateBucketFilterBadge();
+      renderStatusAndRightPanel();
       document.getElementById('runnerSearchInput').value = '';
       document.getElementById('runnerEventSelect').value = 'ALL';
       document.getElementById('runnerCategorySelect').value = 'ALL';
