@@ -539,7 +539,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Sticky Section Navigation Menu -->
     <nav class="sticky top-2 z-40 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2" aria-label="Section Navigation">
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mr-1.5 hidden sm:inline">Jump to:</span>
         <button
           data-nav-target="overviewSection"
           onclick="scrollToSection('overviewSection')"
