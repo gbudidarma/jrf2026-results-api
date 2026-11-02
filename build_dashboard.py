@@ -501,7 +501,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
   <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header Banner -->
-    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
+    <div id="topHeaderSection" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-[var(--foreground)]">
@@ -536,35 +536,86 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Top KPI Cards -->
-    <div id="kpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
-
-    <!-- Status Breakdown Bar + Event Comparison Table -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Left: Status Breakdown & Pace Details -->
-      <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-4">
-        <div>
-          <h2 id="statusCardTitle" class="text-base font-semibold text-[var(--foreground)]">Completion &amp; Attrition Breakdown</h2>
-          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Percentage of Finishers, DNF, Cut-Off (OTL), and Did Not Start (DNS)</p>
-        </div>
-        <div id="statusVisual" class="space-y-4"></div>
-        <div id="paceGenderCards" class="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--border)]"></div>
+    <!-- Sticky Section Navigation Menu -->
+    <nav class="sticky top-2 z-40 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2" aria-label="Section Navigation">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mr-1.5 hidden sm:inline">Jump to:</span>
+        <button
+          data-nav-target="overviewSection"
+          onclick="scrollToSection('overviewSection')"
+          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow-sm"
+        >
+          Overview &amp; Pace
+        </button>
+        <button
+          data-nav-target="countrySection"
+          onclick="scrollToSection('countrySection')"
+          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+        >
+          Country Joiners
+        </button>
+        <button
+          data-nav-target="winnersSection"
+          onclick="scrollToSection('winnersSection')"
+          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+        >
+          Category Winners &amp; Podiums
+        </button>
+        <button
+          data-nav-target="runnerTableSection"
+          onclick="scrollToSection('runnerTableSection')"
+          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+        >
+          All Runners Results
+        </button>
+        <button
+          data-nav-target="doubleRunnersSection"
+          onclick="scrollToSection('doubleRunnersSection')"
+          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+        >
+          Double Category Runners
+        </button>
       </div>
+      <button
+        onclick="scrollToSection('topHeaderSection')"
+        class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition ml-auto"
+        title="Scroll back to top"
+      >
+        ↑ Top
+      </button>
+    </nav>
 
-      <!-- Right: All 4 Events Comparison Matrix OR Finish Time Histogram -->
-      <div class="lg:col-span-7 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <!-- Top KPI Cards -->
+    <div id="overviewSection" class="scroll-mt-20 space-y-6">
+      <div id="kpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+
+      <!-- Status Breakdown Bar + Event Comparison Table -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left: Status Breakdown & Pace Details -->
+        <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-4">
           <div>
-            <h2 id="rightPanelTitle" class="text-base font-semibold text-[var(--foreground)]">Event-by-Event Performance Matrix</h2>
-            <p id="rightPanelSubtitle" class="text-xs text-[var(--muted-foreground)] mt-0.5">Click any event row to filter the dashboard to that specific race</p>
+            <h2 id="statusCardTitle" class="text-base font-semibold text-[var(--foreground)]">Completion &amp; Attrition Breakdown</h2>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Percentage of Finishers, DNF, Cut-Off (OTL), and Did Not Start (DNS)</p>
           </div>
+          <div id="statusVisual" class="space-y-4"></div>
+          <div id="paceGenderCards" class="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--border)]"></div>
         </div>
-        <div id="rightPanelContent"></div>
+
+        <!-- Right: All 4 Events Comparison Matrix OR Finish Time Histogram -->
+        <div class="lg:col-span-7 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h2 id="rightPanelTitle" class="text-base font-semibold text-[var(--foreground)]">Event-by-Event Performance Matrix</h2>
+              <p id="rightPanelSubtitle" class="text-xs text-[var(--muted-foreground)] mt-0.5">Click any event row to filter the dashboard to that specific race</p>
+            </div>
+          </div>
+          <div id="rightPanelContent"></div>
+        </div>
       </div>
     </div>
 
     <!-- Country Joiners Pie Chart & Nationality Breakdown Section -->
-    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
+    <div id="countrySection" class="scroll-mt-20 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4 border-b border-[var(--border)]">
         <div>
           <div class="flex flex-wrap items-center gap-2">
@@ -580,7 +631,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- Category Winners & Podium Section -->
-    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
+    <div id="winnersSection" class="scroll-mt-20 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
           <h2 class="text-lg font-bold text-[var(--foreground)]">Category Winners &amp; Podiums (All Events)</h2>
@@ -619,7 +670,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- All-Events Detailed Runner Search & Results Table -->
-    <div id="runnerTableSection" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
+    <div id="runnerTableSection" class="scroll-mt-20 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
           <div class="flex flex-wrap items-center gap-2">
@@ -755,7 +806,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- Double Category Runners (Day 1 + Day 2 Multi-Event Tracker) -->
-    <div id="doubleRunnersSection" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
+    <div id="doubleRunnersSection" class="scroll-mt-20 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
           <div class="flex flex-wrap items-center gap-2">
@@ -2336,6 +2387,48 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       renderDoubleComboCards();
       filterDoubleRunnersList();
     });
+
+    const NAV_SECTION_IDS = [
+      'overviewSection',
+      'countrySection',
+      'winnersSection',
+      'runnerTableSection',
+      'doubleRunnersSection'
+    ];
+
+    function setActiveNavBtn(targetId) {
+      document.querySelectorAll('.nav-jump-btn').forEach(btn => {
+        const active = btn.dataset.navTarget === targetId;
+        btn.className = active
+          ? 'nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow-sm'
+          : 'nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]';
+      });
+    }
+
+    function scrollToSection(sectionId) {
+      const el = document.getElementById(sectionId);
+      if (!el) return;
+      if (NAV_SECTION_IDS.includes(sectionId)) {
+        setActiveNavBtn(sectionId);
+      } else {
+        setActiveNavBtn('overviewSection');
+      }
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    window.addEventListener('scroll', () => {
+      let current = NAV_SECTION_IDS[0];
+      for (const id of NAV_SECTION_IDS) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 140) {
+            current = id;
+          }
+        }
+      }
+      setActiveNavBtn(current);
+    }, { passive: true });
 
     initRunnerFilterOptions();
     renderAll();
