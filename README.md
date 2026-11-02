@@ -57,13 +57,13 @@ This repository includes a self-contained, zero-dependency interactive HTML dash
 
 ### Double Category Runners Summary (Day 1 + Day 2)
 
-| Day 1 + Day 2 Combination | Total Distance | Registered Runners | Finished Both (`%`) |
-| :--- | :---: | ---: | ---: |
-| **HM (Day 1) + 10K (Day 2)** | `31.1 KM` | `590` | `481` (`81.5%`) |
-| **HM (Day 1) + Marathon (Day 2)** | `63.3 KM` | `286` | `177` (`61.9%`) |
-| **5K (Day 1) + 10K (Day 2)** | `15.0 KM` | `213` | `166` (`77.9%`) |
-| **5K (Day 1) + Marathon (Day 2)** | `47.2 KM` | `83` | `49` (`59.0%`) |
-| **All Double Combinations** | **—** | **`1,172`** | **`873` (`74.5%`)** |
+| Day 1 + Day 2 Combination | Total Distance | Registered Runners | Finished Both (`%`) | Male Finished (`%`) | Female Finished (`%`) |
+| :--- | :---: | ---: | ---: | ---: | ---: |
+| **HM (Day 1) + 10K (Day 2)** | `31.1 KM` | `590` (`459` M / `131` F) | `481` (`81.5%`) | `382 / 459` (`83.2%`) | `99 / 131` (`75.6%`) |
+| **HM (Day 1) + Marathon (Day 2)** | `63.3 KM` | `286` (`275` M / `11` F) | `177` (`61.9%`) | `173 / 275` (`62.9%`) | `4 / 11` (`36.4%`) |
+| **5K (Day 1) + 10K (Day 2)** | `15.0 KM` | `213` (`117` M / `96` F) | `166` (`77.9%`) | `88 / 117` (`75.2%`) | `78 / 96` (`81.2%`) |
+| **5K (Day 1) + Marathon (Day 2)** | `47.2 KM` | `83` (`76` M / `7` F) | `49` (`59.0%`) | `45 / 76` (`59.2%`) | `4 / 7` (`57.1%`) |
+| **All Double Combinations** | **—** | **`1,172` (`927` M / `245` F)** | **`873` (`74.5%`)** | **`688 / 927` (`74.2%`)** | **`185 / 245` (`75.5%`)** |
 
 ---
 

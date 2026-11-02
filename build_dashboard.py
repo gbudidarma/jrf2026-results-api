@@ -406,11 +406,11 @@ def compute_dashboard_data() -> dict:
     combo_order = {"HM_FM": 0, "HM_10K": 1, "5K_FM": 2, "5K_10K": 3}
     double_pairs_raw = []
     combo_stats = {
-        "ALL": {"reg": 0, "fin_both": 0},
-        "HM_FM": {"reg": 0, "fin_both": 0},
-        "HM_10K": {"reg": 0, "fin_both": 0},
-        "5K_FM": {"reg": 0, "fin_both": 0},
-        "5K_10K": {"reg": 0, "fin_both": 0},
+        "ALL": {"reg": 0, "reg_m": 0, "reg_f": 0, "fin_both": 0, "fin_m": 0, "fin_f": 0},
+        "HM_FM": {"reg": 0, "reg_m": 0, "reg_f": 0, "fin_both": 0, "fin_m": 0, "fin_f": 0},
+        "HM_10K": {"reg": 0, "reg_m": 0, "reg_f": 0, "fin_both": 0, "fin_m": 0, "fin_f": 0},
+        "5K_FM": {"reg": 0, "reg_m": 0, "reg_f": 0, "fin_both": 0, "fin_m": 0, "fin_f": 0},
+        "5K_10K": {"reg": 0, "reg_m": 0, "reg_f": 0, "fin_both": 0, "fin_m": 0, "fin_f": 0},
     }
 
     for i1, i2 in matched_pairs_idx:
@@ -424,6 +424,7 @@ def compute_dashboard_data() -> dict:
         d2_short = "FM" if ev2_slug == "hydroplus_marathon" else "10K"
         combo_code = f"{d1_short}_{d2_short}"
         total_dist = event_lookup[r1[0]]["dist"] + event_lookup[r2[0]]["dist"]
+        gen = r1[8]
 
         fin1 = r1[2] == "FINISHED" and time_to_sec(r1[5]) is not None
         fin2 = r2[2] == "FINISHED" and time_to_sec(r2[5]) is not None
@@ -431,9 +432,22 @@ def compute_dashboard_data() -> dict:
 
         combo_stats["ALL"]["reg"] += 1
         combo_stats[combo_code]["reg"] += 1
+        if gen == "Male":
+            combo_stats["ALL"]["reg_m"] += 1
+            combo_stats[combo_code]["reg_m"] += 1
+        elif gen == "Female":
+            combo_stats["ALL"]["reg_f"] += 1
+            combo_stats[combo_code]["reg_f"] += 1
+
         if both_fin:
             combo_stats["ALL"]["fin_both"] += 1
             combo_stats[combo_code]["fin_both"] += 1
+            if gen == "Male":
+                combo_stats["ALL"]["fin_m"] += 1
+                combo_stats[combo_code]["fin_m"] += 1
+            elif gen == "Female":
+                combo_stats["ALL"]["fin_f"] += 1
+                combo_stats[combo_code]["fin_f"] += 1
             b_sum = (time_to_sec(r1[5]) or 0) + (time_to_sec(r2[5]) or 0)
             n_sum = (time_to_sec(r1[13]) or time_to_sec(r1[5]) or 0) + (time_to_sec(r2[13]) or time_to_sec(r2[5]) or 0)
             comb_bruto = sec_to_hms(b_sum)
@@ -837,6 +851,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="text-lg font-bold text-[var(--foreground)]">Double Category Runners — Day 1 &amp; Day 2 Multi-Event Tracker</h2>
             <span id="doubleResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500"></span>
+            <span id="doubleGenderSummaryBadge" class="inline-flex flex-wrap items-center gap-1.5 text-xs"></span>
           </div>
           <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
             Runners registered in both Day 1 (Half Marathon / 5K) and Day 2 (Marathon / 10K)
@@ -2091,10 +2106,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (!container || !DASHBOARD_DATA.double_summary) return;
       const keys = ['ALL', 'HM_FM', 'HM_10K', '5K_FM', '5K_10K'];
       container.innerHTML = keys.map(k => {
-        const st = DASHBOARD_DATA.double_summary[k] || { reg: 0, fin_both: 0 };
+        const st = DASHBOARD_DATA.double_summary[k] || { reg: 0, reg_m: 0, reg_f: 0, fin_both: 0, fin_m: 0, fin_f: 0 };
         const meta = DOUBLE_COMBO_META[k];
         const active = doubleComboFilter === k;
         const pct = st.reg ? ((st.fin_both * 100) / st.reg).toFixed(1) : '0.0';
+        const finM = st.fin_m || 0;
+        const finF = st.fin_f || 0;
+        const regM = st.reg_m || 0;
+        const regF = st.reg_f || 0;
+        const mPct = regM ? ((finM * 100) / regM).toFixed(1) : '0.0';
+        const fPct = regF ? ((finF * 100) / regF).toFixed(1) : '0.0';
         return `
           <div
             onclick="selectDoubleCombo('${k}')"
@@ -2111,13 +2132,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               </div>
               <div class="text-xs text-[var(--muted-foreground)] mt-0.5">${meta.sub}</div>
             </div>
-            <div class="mt-3 pt-2 border-t border-[var(--border)] flex items-baseline justify-between">
-              <div>
-                <span class="text-lg font-bold text-[var(--foreground)]">${fmtNum(st.reg)}</span>
-                <span class="text-xs text-[var(--muted-foreground)] ml-1">runners</span>
+            <div class="mt-3 pt-2 border-t border-[var(--border)] space-y-2">
+              <div class="flex items-baseline justify-between gap-2">
+                <div>
+                  <span class="text-lg font-bold text-[var(--foreground)]">${fmtNum(st.reg)}</span>
+                  <span class="text-xs text-[var(--muted-foreground)] ml-1">runners</span>
+                </div>
+                <div class="text-xs text-emerald-500 font-semibold text-right">
+                  ${fmtNum(st.fin_both)} finished both (${pct}%)
+                </div>
               </div>
-              <div class="text-xs text-emerald-500 font-semibold">
-                ${fmtNum(st.fin_both)} finished both (${pct}%)
+              <div class="grid grid-cols-2 gap-1.5 pt-2 border-t border-[var(--border)] text-xs">
+                <div class="px-2 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20">
+                  <div class="text-[var(--muted-foreground)] font-medium">Male Finished</div>
+                  <div class="font-mono font-bold text-sky-500 mt-0.5">${fmtNum(finM)} <span class="font-normal text-[var(--muted-foreground)]">/ ${fmtNum(regM)} (${mPct}%)</span></div>
+                </div>
+                <div class="px-2 py-1.5 rounded-lg bg-pink-500/10 border border-pink-500/20">
+                  <div class="text-[var(--muted-foreground)] font-medium">Female Finished</div>
+                  <div class="font-mono font-bold text-pink-500 mt-0.5">${fmtNum(finF)} <span class="font-normal text-[var(--muted-foreground)]">/ ${fmtNum(regF)} (${fPct}%)</span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -2186,7 +2219,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const endIdx = Math.min(startIdx + doublePageSize, total);
       const pageSlice = filteredDoublePairs.slice(startIdx, endIdx);
 
-      document.getElementById('doubleResultCountBadge').textContent = `${fmtNum(total)} double runners`;
+      let finBothCount = 0, finMaleCount = 0, finFemaleCount = 0;
+      filteredDoublePairs.forEach(p => {
+        if (p[3] === 1) {
+          finBothCount++;
+          const g = DASHBOARD_DATA.runners[p[0]][8];
+          if (g === 'Male') finMaleCount++;
+          else if (g === 'Female') finFemaleCount++;
+        }
+      });
+
+      document.getElementById('doubleResultCountBadge').textContent = `${fmtNum(total)} double runners (${fmtNum(finBothCount)} finished both)`;
+      const genBadgeEl = document.getElementById('doubleGenderSummaryBadge');
+      if (genBadgeEl) {
+        genBadgeEl.innerHTML = `
+          <span class="px-2.5 py-0.5 rounded-full font-semibold bg-sky-500/10 text-sky-500 border border-sky-500/20">Male Finished: ${fmtNum(finMaleCount)}</span>
+          <span class="px-2.5 py-0.5 rounded-full font-semibold bg-pink-500/10 text-pink-500 border border-pink-500/20">Female Finished: ${fmtNum(finFemaleCount)}</span>
+        `;
+      }
       document.getElementById('doublePaginationInfo').textContent =
         total > 0
           ? `Showing ${fmtNum(startIdx + 1)}–${fmtNum(endIdx)} of ${fmtNum(total)} double-category runners`
