@@ -346,8 +346,117 @@ def compute_dashboard_data() -> dict:
                 cat_rk,
                 netto_str,
                 netto_p_str,
+                -1,
             ]
         )
+
+    # Identify Double Category Runners (registered in both Day 1 and Day 2)
+    by_day1 = defaultdict(list)
+    by_day2 = defaultdict(list)
+    for r_idx, r in enumerate(all_results):
+        nm = " ".join((r.get("name") or "").strip().upper().split())
+        if not nm or nm in ("UNKNOWN", "-") or nm.startswith("PACER"):
+            continue
+        gen = r.get("gender") or "Unknown"
+        ctry = r.get("country") or "-"
+        if r["race_day"] == "Day 1":
+            by_day1[(nm, gen, ctry)].append(r_idx)
+        elif r["race_day"] == "Day 2":
+            by_day2[(nm, gen, ctry)].append(r_idx)
+
+    matched_pairs_idx = []
+    used_d1 = set()
+    used_d2 = set()
+
+    # Pass 1: Exact 1-to-1 normalized (name, gender, country) matches across Day 1 and Day 2
+    for key, d1_indices in by_day1.items():
+        if key in by_day2 and len(d1_indices) == 1 and len(by_day2[key]) == 1:
+            i1 = d1_indices[0]
+            i2 = by_day2[key][0]
+            matched_pairs_idx.append((i1, i2))
+            used_d1.add(i1)
+            used_d2.add(i2)
+
+    # Pass 2: 2+ word prefix matches for unmatched singletons with same (gender, country)
+    # e.g., "CUT NOOSY" (Day 1 HM) <-> "CUT NOOSY KEUMALA FAJRI" (Day 2 10K)
+    d1_prefix2 = defaultdict(list)
+    d2_prefix2 = defaultdict(list)
+    for (nm, gen, ctry), d1_indices in by_day1.items():
+        if len(d1_indices) == 1 and d1_indices[0] not in used_d1:
+            words = nm.split()
+            if len(words) >= 2:
+                d1_prefix2[(words[0], words[1], gen, ctry)].append((words, d1_indices[0]))
+
+    for (nm, gen, ctry), d2_indices in by_day2.items():
+        if len(d2_indices) == 1 and d2_indices[0] not in used_d2:
+            words = nm.split()
+            if len(words) >= 2:
+                d2_prefix2[(words[0], words[1], gen, ctry)].append((words, d2_indices[0]))
+
+    for pkey, list1 in d1_prefix2.items():
+        if pkey in d2_prefix2 and len(list1) == 1 and len(d2_prefix2[pkey]) == 1:
+            w1, i1 = list1[0]
+            w2, i2 = d2_prefix2[pkey][0]
+            min_len = min(len(w1), len(w2))
+            if w1[:min_len] == w2[:min_len]:
+                matched_pairs_idx.append((i1, i2))
+                used_d1.add(i1)
+                used_d2.add(i2)
+
+    combo_order = {"HM_FM": 0, "HM_10K": 1, "5K_FM": 2, "5K_10K": 3}
+    double_pairs_raw = []
+    combo_stats = {
+        "ALL": {"reg": 0, "fin_both": 0},
+        "HM_FM": {"reg": 0, "fin_both": 0},
+        "HM_10K": {"reg": 0, "fin_both": 0},
+        "5K_FM": {"reg": 0, "fin_both": 0},
+        "5K_10K": {"reg": 0, "fin_both": 0},
+    }
+
+    for i1, i2 in matched_pairs_idx:
+        compact_runners[i1][15] = i2
+        compact_runners[i2][15] = i1
+        r1 = compact_runners[i1]
+        r2 = compact_runners[i2]
+        ev1_slug = event_lookup[r1[0]]["slug"]
+        ev2_slug = event_lookup[r2[0]]["slug"]
+        d1_short = "HM" if ev1_slug == "mybca_jakarta_half_marathon" else "5K"
+        d2_short = "FM" if ev2_slug == "hydroplus_marathon" else "10K"
+        combo_code = f"{d1_short}_{d2_short}"
+        total_dist = event_lookup[r1[0]]["dist"] + event_lookup[r2[0]]["dist"]
+
+        fin1 = r1[2] == "FINISHED" and time_to_sec(r1[5]) is not None
+        fin2 = r2[2] == "FINISHED" and time_to_sec(r2[5]) is not None
+        both_fin = 1 if (fin1 and fin2) else 0
+
+        combo_stats["ALL"]["reg"] += 1
+        combo_stats[combo_code]["reg"] += 1
+        if both_fin:
+            combo_stats["ALL"]["fin_both"] += 1
+            combo_stats[combo_code]["fin_both"] += 1
+            b_sum = (time_to_sec(r1[5]) or 0) + (time_to_sec(r2[5]) or 0)
+            n_sum = (time_to_sec(r1[13]) or time_to_sec(r1[5]) or 0) + (time_to_sec(r2[13]) or time_to_sec(r2[5]) or 0)
+            comb_bruto = sec_to_hms(b_sum)
+            comb_netto = sec_to_hms(n_sum)
+            comb_pace = sec_to_pace(n_sum / total_dist)
+            sort_time = n_sum
+        else:
+            comb_bruto = "-"
+            comb_netto = "-"
+            comb_pace = "-"
+            sort_time = 999999
+
+        double_pairs_raw.append(
+            (
+                0 if both_fin else 1,
+                combo_order.get(combo_code, 9),
+                sort_time,
+                [i1, i2, combo_code, both_fin, comb_bruto, comb_netto, comb_pace],
+            )
+        )
+
+    double_pairs_raw.sort(key=lambda x: (x[0], x[1], x[2]))
+    double_pairs = [x[3] for x in double_pairs_raw]
 
     fin_all = status_all.get("FINISHED", 0)
     dnf_all = status_all.get("DNF", 0)
@@ -376,6 +485,8 @@ def compute_dashboard_data() -> dict:
         "events": events_analytics,
         "event_lookup": event_lookup,
         "runners": compact_runners,
+        "double_summary": combo_stats,
+        "double_pairs": double_pairs,
     }
 
 
@@ -635,6 +746,127 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <span id="pageIndicator" class="text-xs font-semibold px-2"></span>
           <button
             id="nextPageBtn"
+            class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium disabled:opacity-40"
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Double Category Runners (Day 1 + Day 2 Multi-Event Tracker) -->
+    <div id="doubleRunnersSection" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-5">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-[var(--border)]">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-bold text-[var(--foreground)]">Double Category Runners — Day 1 &amp; Day 2 Multi-Event Tracker</h2>
+            <span id="doubleResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500"></span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Runners registered in both Day 1 (Half Marathon / 5K) and Day 2 (Marathon / 10K)
+          </p>
+        </div>
+        <button
+          id="resetDoubleFiltersBtn"
+          class="self-start lg:self-auto px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition"
+        >
+          Reset Double Filters
+        </button>
+      </div>
+
+      <!-- Double Combo Summary Cards -->
+      <div id="doubleComboCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"></div>
+
+      <!-- Double Runner Search & Filter Controls -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Search Double Runner (Name, Bib No, Country)</label>
+          <input
+            id="doubleSearchInput"
+            type="text"
+            placeholder="Search by runner name, bib number, or country..."
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Race Combination</label>
+          <select
+            id="doubleComboSelect"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none"
+          >
+            <option value="ALL">All Combinations</option>
+            <option value="HM_FM">Day 1 HM + Day 2 Marathon (63.3K)</option>
+            <option value="HM_10K">Day 1 HM + Day 2 10K (31.1K)</option>
+            <option value="5K_FM">Day 1 5K + Day 2 Marathon (47.2K)</option>
+            <option value="5K_10K">Day 1 5K + Day 2 10K (15.0K)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Completion Status</label>
+          <select
+            id="doubleStatusSelect"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none"
+          >
+            <option value="ALL">All Registered Double Runners</option>
+            <option value="BOTH_FINISHED">Finished Both (Day 1 &amp; Day 2)</option>
+            <option value="INCOMPLETE">Partial / DNS / DNF</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Gender</label>
+          <select
+            id="doubleGenderSelect"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none"
+          >
+            <option value="ALL">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Double Category Runners Comparison Table -->
+      <div class="overflow-x-auto border border-[var(--border)] rounded-xl">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-[var(--background)] border-b border-[var(--border)] text-[var(--muted-foreground)]">
+              <th class="py-3 px-2.5 font-semibold">#</th>
+              <th class="py-3 px-3 font-semibold">Runner Name</th>
+              <th class="py-3 px-2 font-semibold">Gender / Country</th>
+              <th class="py-3 px-2.5 font-semibold">Combo</th>
+              <th class="py-3 px-3 font-semibold border-l border-[var(--border)]">Day 1 Race (HM / 5K)</th>
+              <th class="py-3 px-2.5 font-semibold text-right">Day 1 Bruto / Netto</th>
+              <th class="py-3 px-3 font-semibold border-l border-[var(--border)]">Day 2 Race (FM / 10K)</th>
+              <th class="py-3 px-2.5 font-semibold text-right">Day 2 Bruto / Netto</th>
+              <th class="py-3 px-3 font-semibold text-right border-l border-[var(--border)]">Total Netto / Avg Pace</th>
+            </tr>
+          </thead>
+          <tbody id="doubleTableBody" class="divide-y divide-[var(--border)]"></tbody>
+        </table>
+      </div>
+
+      <!-- Double Table Pagination -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+        <div id="doublePaginationInfo" class="text-xs text-[var(--muted-foreground)]"></div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-[var(--muted-foreground)]">Rows:</label>
+          <select
+            id="doublePageSizeSelect"
+            class="px-2 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs"
+          >
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+          <button
+            id="doublePrevPageBtn"
+            class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium disabled:opacity-40"
+          >
+            ← Prev
+          </button>
+          <span id="doublePageIndicator" class="text-xs font-semibold px-2"></span>
+          <button
+            id="doubleNextPageBtn"
             class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium disabled:opacity-40"
           >
             Next →
@@ -923,13 +1155,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         `;
       }).join('');
 
+      let partnerBannerHtml = '';
+      if (r[15] !== undefined && r[15] >= 0) {
+        const pr = DASHBOARD_DATA.runners[r[15]];
+        if (pr) {
+          const pev = DASHBOARD_DATA.event_lookup[pr[0]];
+          partnerBannerHtml = `
+            <div class="p-3 rounded-xl bg-[var(--card)] border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">Double Category Runner (${escapeHtml(pev.day)})</span>
+                <span class="font-semibold text-[var(--foreground)]">${escapeHtml(pev.name)} (${pev.dist} KM)</span>
+                <span class="text-[var(--muted-foreground)]">• Bib: <strong class="font-mono text-[var(--foreground)]">${escapeHtml(pr[3])}</strong> • Name: <strong>${escapeHtml(pr[4])}</strong></span>
+              </div>
+              <div class="flex items-center gap-3">
+                ${statusBadgeHtml(pr[1], pr[2])}
+                <span class="font-mono text-[var(--muted-foreground)]">Bruto: <strong class="text-[var(--foreground)]">${escapeHtml(pr[5] || '—')}</strong></span>
+                <span class="font-mono text-emerald-500">Netto: <strong>${escapeHtml(pr[13] || '—')}</strong></span>
+              </div>
+            </div>
+          `;
+        }
+      }
+
       drawer.innerHTML = `
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               ${statusBadgeHtml(r[1], r[2])}
               ${r[12] ? `<span class="px-2 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/30 font-mono text-xs font-semibold">Cat Rank #${fmtNum(r[12])}</span>` : ''}
               <span class="text-base font-bold text-[var(--foreground)]">${escapeHtml(r[4] || '(No Name)')}</span>
+              ${r[15] >= 0 ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-semibold">Double (Day 1+2)</span>` : ''}
               <span class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] font-mono text-xs text-[var(--muted-foreground)]">Bib: ${escapeHtml(r[3])}</span>
             </div>
             <div class="text-xs text-[var(--muted-foreground)] mt-1">
@@ -953,6 +1208,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </button>
           </div>
         </div>
+        ${partnerBannerHtml}
         <div>
           <div class="text-xs font-semibold text-[var(--muted-foreground)] mb-2">Checkpoint Split Times (Segment Intervals • Sum = Netto Finish Time: <span class="font-mono text-emerald-500">${escapeHtml(r[13] || '—')}</span>)</div>
           <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">${splitsHtml}</div>
@@ -1005,7 +1261,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <td class="py-2.5 px-3 whitespace-nowrap">${statusBadgeHtml(r[1], r[2])}</td>
             <td class="py-2.5 px-2 whitespace-nowrap">${catRankBadgeHtml(r[12])}</td>
             <td class="py-2.5 px-2.5 font-mono font-semibold text-[var(--foreground)] whitespace-nowrap">${escapeHtml(r[3])}</td>
-            <td class="py-2.5 px-3 font-semibold text-[var(--foreground)]">${escapeHtml(r[4] || '—')}</td>
+            <td class="py-2.5 px-3 font-semibold text-[var(--foreground)]">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span>${escapeHtml(r[4] || '—')}</span>
+                ${r[15] >= 0 ? `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-xs font-medium">Double</span>` : ''}
+              </div>
+            </td>
             <td class="py-2.5 px-2.5 whitespace-nowrap">
               <span class="text-[var(--foreground)] font-medium">${escapeHtml(ev.name)}</span>
             </td>
@@ -1725,12 +1986,226 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       `;
     }
 
+    // Double Category Runners State
+    let doubleQuery = '';
+    let doubleComboFilter = 'ALL';
+    let doubleStatusFilter = 'ALL';
+    let doubleGenderFilter = 'ALL';
+    let doublePage = 1;
+    let doublePageSize = 10;
+    let filteredDoublePairs = [];
+
+    const DOUBLE_COMBO_META = {
+      ALL: { title: 'All Double Runners', sub: 'Day 1 + Day 2 Registered', badge: 'All Combos', dist: '' },
+      HM_FM: { title: 'HM + Marathon', sub: '21.1K (Day 1) + 42.2K (Day 2)', badge: '63.3 KM', dist: '63.3 KM' },
+      HM_10K: { title: 'HM + 10K', sub: '21.1K (Day 1) + 10K (Day 2)', badge: '31.1 KM', dist: '31.1 KM' },
+      '5K_FM': { title: '5K + Marathon', sub: '5K (Day 1) + 42.2K (Day 2)', badge: '47.2 KM', dist: '47.2 KM' },
+      '5K_10K': { title: '5K + 10K', sub: '5K (Day 1) + 10K (Day 2)', badge: '15.0 KM', dist: '15.0 KM' }
+    };
+
+    function selectDoubleCombo(comboCode) {
+      doubleComboFilter = comboCode;
+      document.getElementById('doubleComboSelect').value = comboCode;
+      renderDoubleComboCards();
+      filterDoubleRunnersList();
+    }
+
+    function renderDoubleComboCards() {
+      const container = document.getElementById('doubleComboCards');
+      if (!container || !DASHBOARD_DATA.double_summary) return;
+      const keys = ['ALL', 'HM_FM', 'HM_10K', '5K_FM', '5K_10K'];
+      container.innerHTML = keys.map(k => {
+        const st = DASHBOARD_DATA.double_summary[k] || { reg: 0, fin_both: 0 };
+        const meta = DOUBLE_COMBO_META[k];
+        const active = doubleComboFilter === k;
+        const pct = st.reg ? ((st.fin_both * 100) / st.reg).toFixed(1) : '0.0';
+        return `
+          <div
+            onclick="selectDoubleCombo('${k}')"
+            class="p-3.5 rounded-xl border cursor-pointer transition select-none flex flex-col justify-between ${
+              active
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+                : 'bg-[var(--background)] border-[var(--border)] hover:border-emerald-500/50'
+            }"
+          >
+            <div>
+              <div class="flex items-center justify-between gap-1.5">
+                <span class="text-xs font-bold text-[var(--foreground)]">${meta.title}</span>
+                <span class="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-[var(--card)] border border-[var(--border)] text-emerald-500">${meta.badge}</span>
+              </div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">${meta.sub}</div>
+            </div>
+            <div class="mt-3 pt-2 border-t border-[var(--border)] flex items-baseline justify-between">
+              <div>
+                <span class="text-lg font-bold text-[var(--foreground)]">${fmtNum(st.reg)}</span>
+                <span class="text-xs text-[var(--muted-foreground)] ml-1">runners</span>
+              </div>
+              <div class="text-xs text-emerald-500 font-semibold">
+                ${fmtNum(st.fin_both)} finished both (${pct}%)
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterDoubleRunnersList() {
+      const q = doubleQuery.trim().toLowerCase();
+      const pairs = DASHBOARD_DATA.double_pairs || [];
+
+      filteredDoublePairs = pairs.filter(p => {
+        const r1 = DASHBOARD_DATA.runners[p[0]];
+        const r2 = DASHBOARD_DATA.runners[p[1]];
+        const combo = p[2];
+        const bothFin = p[3] === 1;
+
+        if (doubleComboFilter !== 'ALL' && combo !== doubleComboFilter) return false;
+        if (doubleStatusFilter === 'BOTH_FINISHED' && !bothFin) return false;
+        if (doubleStatusFilter === 'INCOMPLETE' && bothFin) return false;
+        if (doubleGenderFilter !== 'ALL' && r1[8] !== doubleGenderFilter) return false;
+
+        if (q) {
+          const n1 = (r1[4] || '').toLowerCase();
+          const n2 = (r2[4] || '').toLowerCase();
+          const b1 = (r1[3] || '').toLowerCase();
+          const b2 = (r2[3] || '').toLowerCase();
+          const ctry = (r1[9] || '').toLowerCase();
+          if (!n1.includes(q) && !n2.includes(q) && !b1.includes(q) && !b2.includes(q) && !ctry.includes(q)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      doublePage = 1;
+      renderDoubleTable();
+    }
+
+    function inspectDoubleRunnerInMainTable(bibNo) {
+      runnerQuery = bibNo;
+      runnerEventFilter = 'ALL';
+      runnerCategoryFilter = 'ALL';
+      runnerGenderFilter = 'ALL';
+      runnerStatusFilter = 'ALL';
+      activeBucketFilter = null;
+      updateBucketFilterBadge();
+      document.getElementById('runnerSearchInput').value = bibNo;
+      document.getElementById('runnerEventSelect').value = 'ALL';
+      document.getElementById('runnerCategorySelect').value = 'ALL';
+      document.getElementById('runnerGenderSelect').value = 'ALL';
+      document.getElementById('runnerStatusSelect').value = 'ALL';
+      filterRunnersList();
+      if (filteredRunners.length > 0) {
+        showRunnerDetail(0);
+      }
+      document.getElementById('runnerTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderDoubleTable() {
+      const total = filteredDoublePairs.length;
+      const totalPages = Math.max(1, Math.ceil(total / doublePageSize));
+      if (doublePage > totalPages) doublePage = totalPages;
+
+      const startIdx = (doublePage - 1) * doublePageSize;
+      const endIdx = Math.min(startIdx + doublePageSize, total);
+      const pageSlice = filteredDoublePairs.slice(startIdx, endIdx);
+
+      document.getElementById('doubleResultCountBadge').textContent = `${fmtNum(total)} double runners`;
+      document.getElementById('doublePaginationInfo').textContent =
+        total > 0
+          ? `Showing ${fmtNum(startIdx + 1)}–${fmtNum(endIdx)} of ${fmtNum(total)} double-category runners`
+          : 'No matching double-category runners found';
+      document.getElementById('doublePageIndicator').textContent = `Page ${fmtNum(doublePage)} of ${fmtNum(totalPages)}`;
+      document.getElementById('doublePrevPageBtn').disabled = doublePage <= 1;
+      document.getElementById('doubleNextPageBtn').disabled = doublePage >= totalPages;
+
+      const tbody = document.getElementById('doubleTableBody');
+      if (!pageSlice.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="py-8 text-center text-sm text-[var(--muted-foreground)]">
+              No double-category runners match your search filters.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = pageSlice.map((p, idx) => {
+        const rankNum = startIdx + idx + 1;
+        const r1 = DASHBOARD_DATA.runners[p[0]];
+        const r2 = DASHBOARD_DATA.runners[p[1]];
+        const ev1 = DASHBOARD_DATA.event_lookup[r1[0]];
+        const ev2 = DASHBOARD_DATA.event_lookup[r2[0]];
+        const combo = p[2];
+        const bothFin = p[3] === 1;
+        const combBruto = p[4];
+        const combNetto = p[5];
+        const combPace = p[6];
+        const meta = DOUBLE_COMBO_META[combo] || { title: combo, dist: '' };
+
+        const nameDisplay = r1[4] === r2[4]
+          ? `<div class="font-bold text-[var(--foreground)]">${escapeHtml(r1[4])}</div>`
+          : `<div class="font-bold text-[var(--foreground)]">${escapeHtml(r2[4].length >= r1[4].length ? r2[4] : r1[4])}</div>
+             <div class="text-xs text-[var(--muted-foreground)]">Day 1: ${escapeHtml(r1[4])} • Day 2: ${escapeHtml(r2[4])}</div>`;
+
+        return `
+          <tr class="hover:bg-[var(--background)] transition">
+            <td class="py-2.5 px-2.5 font-mono text-[var(--muted-foreground)]">#${fmtNum(rankNum)}</td>
+            <td class="py-2.5 px-3">
+              ${nameDisplay}
+            </td>
+            <td class="py-2.5 px-2 whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded text-xs font-medium ${
+                r1[8] === 'Male' ? 'bg-sky-500/10 text-sky-500' : 'bg-pink-500/10 text-pink-500'
+              }">${escapeHtml(r1[8])}</span>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">${escapeHtml(r1[9])}</div>
+            </td>
+            <td class="py-2.5 px-2.5 whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">${escapeHtml(meta.title)}</span>
+              <div class="text-xs font-mono text-[var(--muted-foreground)] mt-0.5">${escapeHtml(meta.dist)}</div>
+            </td>
+            <td onclick="inspectDoubleRunnerInMainTable('${escapeHtml(r1[3])}')" class="py-2.5 px-3 border-l border-[var(--border)] cursor-pointer hover:opacity-80" title="Click to inspect Day 1 splits">
+              <div class="flex items-center gap-1.5">
+                ${statusBadgeHtml(r1[1], r1[2])}
+                <span class="font-semibold text-[var(--foreground)]">${escapeHtml(ev1.name)}</span>
+              </div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Bib: <span class="font-mono font-semibold text-[var(--foreground)]">${escapeHtml(r1[3])}</span> • ${escapeHtml(r1[7])}</div>
+            </td>
+            <td class="py-2.5 px-2.5 text-right font-mono whitespace-nowrap">
+              <div class="text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${escapeHtml(r1[5] || '—')}</span></div>
+              <div class="text-xs text-emerald-500">Netto: <span class="font-bold">${escapeHtml(r1[13] || '—')}</span></div>
+            </td>
+            <td onclick="inspectDoubleRunnerInMainTable('${escapeHtml(r2[3])}')" class="py-2.5 px-3 border-l border-[var(--border)] cursor-pointer hover:opacity-80" title="Click to inspect Day 2 splits">
+              <div class="flex items-center gap-1.5">
+                ${statusBadgeHtml(r2[1], r2[2])}
+                <span class="font-semibold text-[var(--foreground)]">${escapeHtml(ev2.name)}</span>
+              </div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Bib: <span class="font-mono font-semibold text-[var(--foreground)]">${escapeHtml(r2[3])}</span> • ${escapeHtml(r2[7])}</div>
+            </td>
+            <td class="py-2.5 px-2.5 text-right font-mono whitespace-nowrap">
+              <div class="text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${escapeHtml(r2[5] || '—')}</span></div>
+              <div class="text-xs text-emerald-500">Netto: <span class="font-bold">${escapeHtml(r2[13] || '—')}</span></div>
+            </td>
+            <td class="py-2.5 px-3 text-right font-mono whitespace-nowrap border-l border-[var(--border)]">
+              ${bothFin ? `
+                <div class="font-bold text-emerald-500">${escapeHtml(combNetto)}</div>
+                <div class="text-xs text-sky-500">${escapeHtml(combPace)}</div>
+                <div class="text-xs text-[var(--muted-foreground)]">Bruto: ${escapeHtml(combBruto)}</div>
+              ` : '<span class="text-xs text-[var(--muted-foreground)]">Incomplete</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     function renderAll() {
       renderTabs();
       renderKPIs();
       renderStatusAndRightPanel();
       renderCountryJoiners();
       renderWinners();
+      renderDoubleComboCards();
     }
 
     // Event listeners for Runner Table
@@ -1813,9 +2288,59 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       renderWinners();
     });
 
+    // Event listeners for Double Category Runners Table
+    document.getElementById('doubleSearchInput').addEventListener('input', e => {
+      doubleQuery = e.target.value;
+      filterDoubleRunnersList();
+    });
+    document.getElementById('doubleComboSelect').addEventListener('change', e => {
+      doubleComboFilter = e.target.value;
+      renderDoubleComboCards();
+      filterDoubleRunnersList();
+    });
+    document.getElementById('doubleStatusSelect').addEventListener('change', e => {
+      doubleStatusFilter = e.target.value;
+      filterDoubleRunnersList();
+    });
+    document.getElementById('doubleGenderSelect').addEventListener('change', e => {
+      doubleGenderFilter = e.target.value;
+      filterDoubleRunnersList();
+    });
+    document.getElementById('doublePageSizeSelect').addEventListener('change', e => {
+      doublePageSize = Number(e.target.value);
+      doublePage = 1;
+      renderDoubleTable();
+    });
+    document.getElementById('doublePrevPageBtn').addEventListener('click', () => {
+      if (doublePage > 1) {
+        doublePage--;
+        renderDoubleTable();
+      }
+    });
+    document.getElementById('doubleNextPageBtn').addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(filteredDoublePairs.length / doublePageSize));
+      if (doublePage < totalPages) {
+        doublePage++;
+        renderDoubleTable();
+      }
+    });
+    document.getElementById('resetDoubleFiltersBtn').addEventListener('click', () => {
+      doubleQuery = '';
+      doubleComboFilter = 'ALL';
+      doubleStatusFilter = 'ALL';
+      doubleGenderFilter = 'ALL';
+      document.getElementById('doubleSearchInput').value = '';
+      document.getElementById('doubleComboSelect').value = 'ALL';
+      document.getElementById('doubleStatusSelect').value = 'ALL';
+      document.getElementById('doubleGenderSelect').value = 'ALL';
+      renderDoubleComboCards();
+      filterDoubleRunnersList();
+    });
+
     initRunnerFilterOptions();
     renderAll();
     filterRunnersList();
+    filterDoubleRunnersList();
   </script>
 </body>
 </html>
