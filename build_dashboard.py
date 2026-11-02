@@ -537,52 +537,78 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- Sticky Section Navigation Menu -->
-    <nav class="sticky top-2 z-40 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2" aria-label="Section Navigation">
-      <div class="flex flex-wrap items-center gap-1.5">
+    <div class="sticky top-2 z-40 flex flex-col items-end">
+      <nav id="stickyNavExpanded" class="w-full bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-3.5 py-2 shadow-sm flex flex-wrap items-center justify-between gap-2" aria-label="Section Navigation">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button
+            data-nav-target="overviewSection"
+            onclick="scrollToSection('overviewSection')"
+            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow-sm"
+          >
+            Overview &amp; Pace
+          </button>
+          <button
+            data-nav-target="countrySection"
+            onclick="scrollToSection('countrySection')"
+            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+          >
+            Country Joiners
+          </button>
+          <button
+            data-nav-target="winnersSection"
+            onclick="scrollToSection('winnersSection')"
+            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+          >
+            Category Winners &amp; Podiums
+          </button>
+          <button
+            data-nav-target="runnerTableSection"
+            onclick="scrollToSection('runnerTableSection')"
+            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+          >
+            All Runners Results
+          </button>
+          <button
+            data-nav-target="doubleRunnersSection"
+            onclick="scrollToSection('doubleRunnersSection')"
+            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+          >
+            Double Category Runners
+          </button>
+        </div>
+        <div class="flex items-center gap-1.5 ml-auto">
+          <button
+            onclick="scrollToSection('topHeaderSection')"
+            class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition"
+            title="Scroll back to top"
+          >
+            ↑ Top
+          </button>
+          <button
+            onclick="toggleNavMenu(true)"
+            class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition"
+            title="Hide navigation menu"
+          >
+            Hide Menu
+          </button>
+        </div>
+      </nav>
+      <div id="stickyNavCollapsed" class="hidden inline-flex items-center gap-1.5 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-2.5 py-1.5 shadow-sm">
         <button
-          data-nav-target="overviewSection"
-          onclick="scrollToSection('overviewSection')"
-          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow-sm"
+          onclick="toggleNavMenu(false)"
+          class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-semibold shadow-sm transition hover:bg-emerald-500"
         >
-          Overview &amp; Pace
+          Menu
         </button>
         <button
-          data-nav-target="countrySection"
-          onclick="scrollToSection('countrySection')"
-          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
+          onclick="scrollToSection('topHeaderSection')"
+          class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition"
+          title="Scroll back to top"
         >
-          Country Joiners
-        </button>
-        <button
-          data-nav-target="winnersSection"
-          onclick="scrollToSection('winnersSection')"
-          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
-        >
-          Category Winners &amp; Podiums
-        </button>
-        <button
-          data-nav-target="runnerTableSection"
-          onclick="scrollToSection('runnerTableSection')"
-          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
-        >
-          All Runners Results
-        </button>
-        <button
-          data-nav-target="doubleRunnersSection"
-          onclick="scrollToSection('doubleRunnersSection')"
-          class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]"
-        >
-          Double Category Runners
+          ↑ Top
         </button>
       </div>
-      <button
-        onclick="scrollToSection('topHeaderSection')"
-        class="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition ml-auto"
-        title="Scroll back to top"
-      >
-        ↑ Top
-      </button>
-    </nav>
+    </div>
 
     <!-- Top KPI Cards -->
     <div id="overviewSection" class="scroll-mt-20 space-y-6">
@@ -2404,6 +2430,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       });
     }
 
+    let navMenuHidden = false;
+
+    function toggleNavMenu(hide) {
+      navMenuHidden = Boolean(hide);
+      const expanded = document.getElementById('stickyNavExpanded');
+      const collapsed = document.getElementById('stickyNavCollapsed');
+      if (!expanded || !collapsed) return;
+      if (navMenuHidden) {
+        expanded.classList.add('hidden');
+        collapsed.classList.remove('hidden');
+      } else {
+        expanded.classList.remove('hidden');
+        collapsed.classList.add('hidden');
+      }
+    }
+
     function scrollToSection(sectionId) {
       const el = document.getElementById(sectionId);
       if (!el) return;
@@ -2411,6 +2453,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         setActiveNavBtn(sectionId);
       } else {
         setActiveNavBtn('overviewSection');
+      }
+      if (window.innerWidth < 640 && sectionId !== 'topHeaderSection') {
+        toggleNavMenu(true);
       }
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
