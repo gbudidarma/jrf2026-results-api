@@ -1,3 +1,4 @@
+import csv
 import json
 import statistics
 from collections import Counter, defaultdict
@@ -7,6 +8,40 @@ WORKSPACE = Path(__file__).resolve().parent
 ARTIFACT_PATH = Path(
     "/Users/gbudidarma/.gemini/antigravity/brain/c6ce6403-c8c9-4e9f-ac00-8d48764a74f9/jrf_race_dashboard.html"
 )
+
+SILABAN_CLASS_ORDER = [
+    "TT1",
+    "TT2",
+    "TT3",
+    "TT-DSC",
+    "TT5",
+    "TT6",
+    "TT7",
+    "TT8",
+    "TT9",
+    "TTp",
+]
+
+
+def load_silaban_csv() -> dict[str, dict[str, str]]:
+    csv_path = WORKSPACE / "KelasBersamaSIlaban.csv"
+    mapping: dict[str, dict[str, str]] = {}
+    if not csv_path.exists():
+        return mapping
+    with open(csv_path, "r", encoding="utf-8-sig") as f:
+        sample = f.read(1024)
+        f.seek(0)
+        delim = "\t" if "\t" in sample else ","
+        reader = csv.DictReader(f, delimiter=delim)
+        for row in reader:
+            bib = (row.get("BIB") or "").strip().upper()
+            if bib:
+                mapping[bib] = {
+                    "class": (row.get("Class") or "").strip(),
+                    "remark": (row.get("Remark") or "").strip(),
+                    "category": (row.get("Category") or "").strip(),
+                }
+    return mapping
 
 
 def time_to_sec(t: str | None) -> int | None:
@@ -307,11 +342,16 @@ def compute_dashboard_data() -> dict:
             }
         )
 
+    silaban_by_bib = load_silaban_csv()
+    silaban_class_counts = Counter()
+    silaban_remark_counts = Counter()
+
     # Encode all 36,306 runners into a compact array for instant client-side search & pagination
     # Format per runner:
     # [0: event_idx, 1: pos_or_null, 2: status_str, 3: bib_no, 4: name, 5: bruto_time_str,
     #  6: bruto_pace_str, 7: category, 8: gender, 9: country, 10: splits_array, 11: is_podium (1/0),
-    #  12: cat_rank, 13: netto_time_str, 14: netto_pace_str]
+    #  12: cat_rank, 13: netto_time_str, 14: netto_pace_str, 15: partner_runner_idx,
+    #  16: remark_str, 17: silaban_class_str]
     compact_runners = []
     for r in all_results:
         ev_idx = event_slug_to_idx[r["event_slug"]]
@@ -329,6 +369,14 @@ def compute_dashboard_data() -> dict:
         pos = r["position"]
         is_pod = 1 if (bib in ev_obj.get("_podium_bibs", set()) or (pos is not None and pos <= 3)) else 0
         cat_rk = ev_obj.get("_cat_rank_by_bib", {}).get(bib)
+        s_info = silaban_by_bib.get(bib.strip().upper(), {})
+        remark_str = s_info.get("remark") or r.get("remark") or ""
+        class_str = s_info.get("class") or r.get("class") or ""
+        if remark_str:
+            silaban_remark_counts[remark_str] += 1
+        if class_str:
+            silaban_class_counts[class_str] += 1
+
         compact_runners.append(
             [
                 ev_idx,
@@ -347,8 +395,25 @@ def compute_dashboard_data() -> dict:
                 netto_str,
                 netto_p_str,
                 -1,
+                remark_str,
+                class_str,
             ]
         )
+
+    ordered_classes = [
+        {"code": c, "count": silaban_class_counts[c]}
+        for c in SILABAN_CLASS_ORDER
+        if silaban_class_counts[c] > 0
+    ] + [
+        {"code": c, "count": cnt}
+        for c, cnt in sorted(silaban_class_counts.items())
+        if c not in SILABAN_CLASS_ORDER
+    ]
+    silaban_meta = {
+        "total": sum(silaban_remark_counts.values()),
+        "remarks": [{"name": k, "count": v} for k, v in silaban_remark_counts.items()],
+        "classes": ordered_classes,
+    }
 
     # Identify Double Category Runners (registered in both Day 1 and Day 2)
     by_day1 = defaultdict(list)
@@ -501,6 +566,7 @@ def compute_dashboard_data() -> dict:
         "runners": compact_runners,
         "double_summary": combo_stats,
         "double_pairs": double_pairs,
+        "silaban_meta": silaban_meta,
     }
 
 
@@ -547,6 +613,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="pt-4 border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] shrink-0">Race Event Filter</span>
         <div id="eventTabs" class="flex flex-wrap items-center gap-2"></div>
+      </div>
+      <!-- Global Remark & Class Filter Bar (KelasBersamaSIlaban.csv joined by BIB No) -->
+      <div class="pt-4 border-t border-[var(--border)] flex flex-col gap-3">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] shrink-0">Global Remark &amp; Class Filter</span>
+            <div id="globalRemarkTabs" class="inline-flex flex-wrap items-center gap-1.5"></div>
+            <div class="flex items-center gap-1.5">
+              <label for="globalClassSelect" class="text-xs font-medium text-[var(--muted-foreground)] ml-1">Class:</label>
+              <select
+                id="globalClassSelect"
+                onchange="selectGlobalClass(this.value)"
+                class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs font-semibold focus:outline-none focus:border-emerald-500"
+              >
+                <option value="ALL">All Classes</option>
+              </select>
+            </div>
+            <button
+              id="resetGlobalFilterBtn"
+              onclick="resetGlobalFilter()"
+              class="hidden px-2.5 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-500 text-xs font-semibold hover:bg-rose-500/20 transition"
+            >
+              ✕ Reset Global Filter
+            </button>
+          </div>
+          <div id="globalFilterActiveBadge" class="hidden text-xs font-medium px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500"></div>
+        </div>
+        <div id="globalClassPillsRow" class="flex flex-wrap items-center gap-1.5"></div>
       </div>
     </div>
 
@@ -731,7 +825,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
 
       <!-- Search & Filter Controls Bar -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div class="sm:col-span-2">
           <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Search Runner (Name, Bib No, Country)</label>
           <input
@@ -783,6 +877,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <option value="DNS">DNS (Did Not Start)</option>
             <option value="DQ">DQ (Disqualified)</option>
             <option value="QRY">QRY (Query)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Remark</label>
+          <select
+            id="runnerRemarkSelect"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none"
+          >
+            <option value="ALL">All Remarks</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Class</label>
+          <select
+            id="runnerClassSelect"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none"
+          >
+            <option value="ALL">All Classes</option>
           </select>
         </div>
       </div>
@@ -1056,10 +1168,333 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     let runnerCategoryFilter = 'ALL';
     let runnerGenderFilter = 'ALL';
     let runnerStatusFilter = 'ALL';
+    let runnerRemarkFilter = 'ALL';
+    let runnerClassFilter = 'ALL';
     let runnerPage = 1;
     let runnerPageSize = 10;
     let filteredRunners = [];
     let activeBucketFilter = null;
+
+    // ===== Global Remark & Class Filter (KelasBersamaSIlaban.csv joined by BIB No) =====
+    let globalRemark = 'ALL';
+    let globalClass = 'ALL';
+    let filteredAnalyticsCache = null;
+    let filteredAnalyticsKey = '';
+
+    function isGlobalFilterActive() {
+      return globalRemark !== 'ALL' || globalClass !== 'ALL';
+    }
+
+    function runnerPassesGlobal(r) {
+      if (globalRemark !== 'ALL' && r[16] !== globalRemark) return false;
+      if (globalClass !== 'ALL' && r[17] !== globalClass) return false;
+      return true;
+    }
+
+    function secToHms(s) {
+      if (s === null || s === undefined || isNaN(s)) return '-';
+      const t = Math.round(s);
+      const p2 = n => String(n).padStart(2, '0');
+      return `${p2(Math.floor(t / 3600))}:${p2(Math.floor((t % 3600) / 60))}:${p2(t % 60)}`;
+    }
+
+    function secToPaceStr(s) {
+      if (s === null || s === undefined || isNaN(s)) return '-';
+      const t = Math.round(s);
+      return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} /km`;
+    }
+
+    function meanOf(arr) {
+      return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    }
+
+    function medianOf(arr) {
+      if (!arr.length) return null;
+      const s = arr.slice().sort((a, b) => a - b);
+      const m = Math.floor(s.length / 2);
+      return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    }
+
+    function pctOf(n, total, digits) {
+      return total ? Number((n * 100 / total).toFixed(digits)) : 0;
+    }
+
+    function computeFilteredAnalytics() {
+      const origEvents = DASHBOARD_DATA.events;
+      const allPaces = [];
+      const counts = { total: 0, finished: 0, dnf: 0, cut: 0, dns: 0, other: 0 };
+
+      const events = origEvents.map((evo, evIdx) => {
+        const dist = evo.distance_km;
+        const rows = DASHBOARD_DATA.runners.filter(r => r[0] === evIdx && runnerPassesGlobal(r));
+        const total = rows.length;
+        const st = { FINISHED: 0, DNF: 0, CUT: 0, DNS: 0, OTHER: 0 };
+        rows.forEach(r => {
+          if (st[r[2]] !== undefined) st[r[2]]++;
+          else st.OTHER++;
+        });
+        const finRows = rows.filter(r => r[2] === 'FINISHED' && parseTimeSec(r[5]));
+        const finSecs = finRows.map(r => parseTimeSec(r[5]));
+        const nettoSecs = finRows.map(r => parseTimeSec(r[13])).filter(v => v !== null && v > 0);
+        const maleSecs = finRows.filter(r => r[8] === 'Male').map(r => parseTimeSec(r[5]));
+        const femaleSecs = finRows.filter(r => r[8] === 'Female').map(r => parseTimeSec(r[5]));
+        finSecs.forEach(s => allPaces.push(s / dist));
+
+        const avgSec = meanOf(finSecs);
+        const medSec = medianOf(finSecs);
+        const minSec = finSecs.length ? Math.min(...finSecs) : null;
+        const avgN = meanOf(nettoSecs);
+        const medN = medianOf(nettoSecs);
+        const minN = nettoSecs.length ? Math.min(...nettoSecs) : null;
+
+        const buckets = (evo.buckets || []).map(b => {
+          const cnt = finSecs.filter(s => s >= b.min_sec && s <= b.max_sec).length;
+          return Object.assign({}, b, { count: cnt, pct: pctOf(cnt, finSecs.length, 1) });
+        });
+
+        const groups = {};
+        rows.forEach(r => {
+          const cat = r[7], gen = r[8];
+          if (!cat || cat === 'Unknown' || cat === 'PACER' || !gen || gen === 'Unknown') return;
+          const key = cat + '||' + gen;
+          if (!groups[key]) groups[key] = { all: [], fin: [] };
+          groups[key].all.push(r);
+          if (r[2] === 'FINISHED' && parseTimeSec(r[5])) groups[key].fin.push(r);
+        });
+
+        const categories = [];
+        evo.categories.forEach(oc => {
+          const g = groups[oc.category + '||' + oc.gender];
+          if (!g || !g.fin.length) return;
+          const sorted = g.fin.slice().sort((a, b) => parseTimeSec(a[5]) - parseTimeSec(b[5]));
+          const gAvg = meanOf(sorted.map(r => parseTimeSec(r[5])));
+          const podium = sorted.slice(0, 3).map((r, i) => {
+            const rs = parseTimeSec(r[5]);
+            return {
+              category_rank: i + 1,
+              overall_pos: r[1],
+              bib_no: r[3],
+              name: r[4],
+              country: r[9] || '-',
+              time: r[5],
+              netto_time: r[13] || r[5],
+              pace: secToPaceStr(rs / dist),
+              netto_pace: r[14] ? `${r[14]} /km` : secToPaceStr(rs / dist)
+            };
+          });
+          categories.push({
+            category: oc.category,
+            gender: oc.gender,
+            total_entered: g.all.length,
+            finishers_count: sorted.length,
+            finish_pct: pctOf(sorted.length, g.all.length, 1),
+            avg_time: secToHms(gAvg),
+            avg_pace: secToPaceStr(gAvg / dist),
+            winner: podium[0] || null,
+            podium: podium
+          });
+        });
+
+        counts.total += total;
+        counts.finished += st.FINISHED;
+        counts.dnf += st.DNF;
+        counts.cut += st.CUT;
+        counts.dns += st.DNS;
+        counts.other += st.OTHER;
+
+        return {
+          event_slug: evo.event_slug,
+          event_name: evo.event_name,
+          race_day: evo.race_day,
+          distance_km: dist,
+          total: total,
+          finished: st.FINISHED,
+          finished_pct: pctOf(st.FINISHED, total, 2),
+          dnf: st.DNF,
+          dnf_pct: pctOf(st.DNF, total, 2),
+          cut: st.CUT,
+          cut_pct: pctOf(st.CUT, total, 2),
+          dnf_plus_cut: st.DNF + st.CUT,
+          dnf_plus_cut_pct: pctOf(st.DNF + st.CUT, total, 2),
+          dns: st.DNS,
+          dns_pct: pctOf(st.DNS, total, 2),
+          other: st.OTHER,
+          other_pct: pctOf(st.OTHER, total, 2),
+          avg_time: secToHms(avgSec),
+          median_time: secToHms(medSec),
+          best_time: secToHms(minSec),
+          avg_netto_time: secToHms(avgN),
+          median_netto_time: secToHms(medN),
+          best_netto_time: secToHms(minN),
+          avg_pace: secToPaceStr(avgSec === null ? null : avgSec / dist),
+          median_pace: secToPaceStr(medSec === null ? null : medSec / dist),
+          best_pace: secToPaceStr(minSec === null ? null : minSec / dist),
+          male_avg_pace: secToPaceStr(maleSecs.length ? meanOf(maleSecs) / dist : null),
+          female_avg_pace: secToPaceStr(femaleSecs.length ? meanOf(femaleSecs) / dist : null),
+          male_finishers: maleSecs.length,
+          female_finishers: femaleSecs.length,
+          cot_label: evo.cot_label,
+          step_label: evo.step_label,
+          buckets: buckets,
+          categories: categories
+        };
+      });
+
+      const overall = {
+        total: counts.total,
+        finished: counts.finished,
+        finished_pct: pctOf(counts.finished, counts.total, 2),
+        dnf: counts.dnf,
+        dnf_pct: pctOf(counts.dnf, counts.total, 2),
+        cut: counts.cut,
+        cut_pct: pctOf(counts.cut, counts.total, 2),
+        dnf_plus_cut: counts.dnf + counts.cut,
+        dnf_plus_cut_pct: pctOf(counts.dnf + counts.cut, counts.total, 2),
+        dns: counts.dns,
+        dns_pct: pctOf(counts.dns, counts.total, 2),
+        other: counts.other,
+        other_pct: pctOf(counts.other, counts.total, 2),
+        avg_pace: secToPaceStr(meanOf(allPaces)),
+        median_pace: secToPaceStr(medianOf(allPaces))
+      };
+      return { overall, events };
+    }
+
+    function getAnalytics() {
+      if (!isGlobalFilterActive()) {
+        return { overall: DASHBOARD_DATA.overall, events: DASHBOARD_DATA.events };
+      }
+      const key = globalRemark + '|' + globalClass;
+      if (!filteredAnalyticsCache || filteredAnalyticsKey !== key) {
+        filteredAnalyticsCache = computeFilteredAnalytics();
+        filteredAnalyticsKey = key;
+      }
+      return filteredAnalyticsCache;
+    }
+
+    function getDoubleSummary() {
+      if (!isGlobalFilterActive()) return DASHBOARD_DATA.double_summary;
+      const blank = () => ({ reg: 0, reg_m: 0, reg_f: 0, fin_both: 0, fin_m: 0, fin_f: 0 });
+      const sum = { ALL: blank(), HM_FM: blank(), HM_10K: blank(), '5K_FM': blank(), '5K_10K': blank() };
+      (DASHBOARD_DATA.double_pairs || []).forEach(p => {
+        const r1 = DASHBOARD_DATA.runners[p[0]];
+        const r2 = DASHBOARD_DATA.runners[p[1]];
+        if (!runnerPassesGlobal(r1) && !runnerPassesGlobal(r2)) return;
+        const combo = p[2];
+        [sum.ALL, sum[combo]].forEach(s => {
+          if (!s) return;
+          s.reg++;
+          if (r1[8] === 'Male') s.reg_m++;
+          else if (r1[8] === 'Female') s.reg_f++;
+          if (p[3] === 1) {
+            s.fin_both++;
+            if (r1[8] === 'Male') s.fin_m++;
+            else if (r1[8] === 'Female') s.fin_f++;
+          }
+        });
+      });
+      return sum;
+    }
+
+    function classBadgeHtml(r) {
+      if (!r || !r[17]) return '';
+      return `<span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30 text-xs font-semibold" title="${escapeHtml(r[16] || '')}">${escapeHtml(r[17])}</span>`;
+    }
+
+    function renderGlobalFilterBar() {
+      const meta = DASHBOARD_DATA.silaban_meta || { total: 0, remarks: [], classes: [] };
+      const tabs = document.getElementById('globalRemarkTabs');
+      const select = document.getElementById('globalClassSelect');
+      const pills = document.getElementById('globalClassPillsRow');
+      const badge = document.getElementById('globalFilterActiveBadge');
+      const resetBtn = document.getElementById('resetGlobalFilterBtn');
+      if (!tabs || !select || !pills) return;
+
+      const baseCls = 'px-3 py-1.5 rounded-xl text-xs font-semibold transition border ';
+      const activeCls = 'bg-emerald-600 text-white border-emerald-600 shadow-sm';
+      const idleCls = 'bg-[var(--background)] text-[var(--foreground)] border-[var(--border)] hover:border-emerald-500/50';
+      tabs.innerHTML =
+        `<button onclick="selectGlobalRemark('ALL')" class="${baseCls}${globalRemark === 'ALL' ? activeCls : idleCls}">All Runners</button>` +
+        meta.remarks.map((rm, i) =>
+          `<button onclick="selectGlobalRemarkByIdx(${i})" class="${baseCls}${globalRemark === rm.name ? activeCls : idleCls}">${escapeHtml(rm.name)} (${fmtNum(rm.count)})</button>`
+        ).join('');
+
+      select.innerHTML = `<option value="ALL">All Classes</option>` +
+        meta.classes.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code)} (${fmtNum(c.count)})</option>`).join('');
+      select.value = globalClass;
+
+      pills.innerHTML = meta.classes.map(c => {
+        const active = globalClass === c.code;
+        return `<button onclick="selectGlobalClass('${escapeHtml(c.code)}')" class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition border ${
+          active
+            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+            : 'bg-[var(--background)] text-[var(--muted-foreground)] border-[var(--border)] hover:text-[var(--foreground)] hover:border-amber-500/50'
+        }">${escapeHtml(c.code)} <span class="font-normal opacity-80">${fmtNum(c.count)}</span></button>`;
+      }).join('');
+
+      const active = isGlobalFilterActive();
+      resetBtn.classList.toggle('hidden', !active);
+      if (active) {
+        const a = getAnalytics();
+        const parts = [];
+        if (globalRemark !== 'ALL') parts.push(globalRemark);
+        if (globalClass !== 'ALL') parts.push(`Class ${globalClass}`);
+        badge.classList.remove('hidden');
+        badge.textContent = `Filter active: ${parts.join(' • ')} — ${fmtNum(a.overall.total)} runners (${fmtNum(a.overall.finished)} finished) applied to the whole dashboard`;
+      } else {
+        badge.classList.add('hidden');
+        badge.textContent = '';
+      }
+    }
+
+    function refreshRunnerEventOptions() {
+      const sel = document.getElementById('runnerEventSelect');
+      if (!sel) return;
+      const prev = sel.value;
+      const a = getAnalytics();
+      sel.innerHTML = `<option value="ALL">All 4 Events (${fmtNum(a.overall.total)})</option>` +
+        DASHBOARD_DATA.event_lookup.map((ev, idx) =>
+          `<option value="${idx}">${ev.name} (${ev.dist}K) — ${fmtNum(a.events[idx].total)}</option>`
+        ).join('');
+      sel.value = prev;
+    }
+
+    function applyGlobalFilter() {
+      filteredAnalyticsCache = null;
+      activeBucketFilter = null;
+      updateBucketFilterBadge();
+      renderGlobalFilterBar();
+      refreshRunnerEventOptions();
+      document.getElementById('runnerDetailDrawer').classList.add('hidden');
+      renderAll();
+      filterRunnersList();
+      filterDoubleRunnersList();
+    }
+
+    function selectGlobalRemark(name) {
+      globalRemark = name;
+      if (name === 'ALL') globalClass = 'ALL';
+      applyGlobalFilter();
+    }
+
+    function selectGlobalRemarkByIdx(i) {
+      const rm = (DASHBOARD_DATA.silaban_meta.remarks || [])[i];
+      if (!rm) return;
+      globalRemark = globalRemark === rm.name ? 'ALL' : rm.name;
+      if (globalRemark === 'ALL') globalClass = 'ALL';
+      applyGlobalFilter();
+    }
+
+    function selectGlobalClass(code) {
+      globalClass = globalClass === code ? 'ALL' : code;
+      applyGlobalFilter();
+    }
+
+    function resetGlobalFilter() {
+      globalRemark = 'ALL';
+      globalClass = 'ALL';
+      applyGlobalFilter();
+    }
 
     function parseTimeSec(t) {
       if (!t) return null;
@@ -1149,10 +1584,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
 
     function getActiveContext() {
+      const a = getAnalytics();
       if (selectedEventSlug === 'ALL') {
-        return { isAll: true, stats: DASHBOARD_DATA.overall, events: DASHBOARD_DATA.events };
+        return { isAll: true, stats: a.overall, events: a.events };
       }
-      const ev = DASHBOARD_DATA.events.find(e => e.event_slug === selectedEventSlug);
+      const ev = a.events.find(e => e.event_slug === selectedEventSlug);
       return { isAll: false, stats: ev, events: [ev] };
     }
 
@@ -1171,6 +1607,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       });
       document.getElementById('runnerCategorySelect').innerHTML = `<option value="ALL">All Categories</option>` +
         Array.from(cats).map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+      const sMeta = DASHBOARD_DATA.silaban_meta || { remarks: [], classes: [] };
+      document.getElementById('runnerRemarkSelect').innerHTML = `<option value="ALL">All Remarks</option>` +
+        sMeta.remarks.map(rm => `<option value="${escapeHtml(rm.name)}">${escapeHtml(rm.name)} (${fmtNum(rm.count)})</option>`).join('');
+      document.getElementById('runnerClassSelect').innerHTML = `<option value="ALL">All Classes</option>` +
+        sMeta.classes.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code)} (${fmtNum(c.count)})</option>`).join('');
     }
 
     function catRankBadgeHtml(catRank) {
@@ -1187,10 +1629,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const evIdx = runnerEventFilter === 'ALL' ? null : Number(runnerEventFilter);
 
       filteredRunners = DASHBOARD_DATA.runners.filter(r => {
+        if (!runnerPassesGlobal(r)) return false;
         if (evIdx !== null && r[0] !== evIdx) return false;
         if (runnerCategoryFilter !== 'ALL' && r[7] !== runnerCategoryFilter) return false;
         if (runnerGenderFilter !== 'ALL' && r[8] !== runnerGenderFilter) return false;
         if (runnerStatusFilter !== 'ALL' && r[2] !== runnerStatusFilter) return false;
+        if (runnerRemarkFilter !== 'ALL' && r[16] !== runnerRemarkFilter) return false;
+        if (runnerClassFilter !== 'ALL' && r[17] !== runnerClassFilter) return false;
         if (activeBucketFilter) {
           if (r[2] !== 'FINISHED') return false;
           if (activeBucketFilter.eventIdx >= 0 && r[0] !== activeBucketFilter.eventIdx) return false;
@@ -1275,6 +1720,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               ${statusBadgeHtml(r[1], r[2])}
               ${r[12] ? `<span class="px-2 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/30 font-mono text-xs font-semibold">Cat Rank #${fmtNum(r[12])}</span>` : ''}
               <span class="text-base font-bold text-[var(--foreground)]">${escapeHtml(r[4] || '(No Name)')}</span>
+              ${r[16] ? `<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30 text-xs font-semibold">${escapeHtml(r[16])}${r[17] ? ' • ' + escapeHtml(r[17]) : ''}</span>` : ''}
               ${r[15] >= 0 ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-semibold">Double (Day 1+2)</span>` : ''}
               <span class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] font-mono text-xs text-[var(--muted-foreground)]">Bib: ${escapeHtml(r[3])}</span>
             </div>
@@ -1355,6 +1801,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <td class="py-2.5 px-3 font-semibold text-[var(--foreground)]">
               <div class="flex flex-wrap items-center gap-1.5">
                 <span>${escapeHtml(r[4] || '—')}</span>
+                ${classBadgeHtml(r)}
                 ${r[15] >= 0 ? `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-xs font-medium">Double</span>` : ''}
               </div>
             </td>
@@ -1379,11 +1826,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     function renderTabs() {
       const container = document.getElementById('eventTabs');
+      const a = getAnalytics();
+      const filtered = isGlobalFilterActive();
       const tabs = [
-        { slug: 'ALL', label: 'All Events (36,306)' },
-        ...DASHBOARD_DATA.events.map(e => ({
+        { slug: 'ALL', label: `All Events (${fmtNum(a.overall.total)})` },
+        ...a.events.map(e => ({
           slug: e.event_slug,
-          label: `${e.event_name} (${e.distance_km}K)`
+          label: `${e.event_name} (${e.distance_km}K)${filtered ? ' · ' + fmtNum(e.total) : ''}`
         }))
       ];
       container.innerHTML = tabs.map(t => {
@@ -1439,7 +1888,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           title: 'Average Pace',
           value: stats.avg_pace,
           sub: isAll ? `Median Pace: ${stats.median_pace}` : `Median Pace: ${stats.median_pace} • Best: ${stats.best_pace}`,
-          badge: isAll ? 'Across all 30,602 finishers' : `${stats.distance_km} KM Distance`,
+          badge: isAll ? `Across all ${fmtNum(stats.finished)} finishers` : `${stats.distance_km} KM Distance`,
           color: 'text-sky-500',
           barColor: 'bg-sky-500',
           pct: 100
@@ -1559,7 +2008,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </tr>
               </thead>
               <tbody class="divide-y divide-[var(--border)] text-xs">
-                ${DASHBOARD_DATA.events.map(ev => `
+                ${getAnalytics().events.map(ev => `
                   <tr onclick="selectEvent('${ev.event_slug}')" class="hover:bg-[var(--background)] cursor-pointer transition">
                     <td class="py-3 pr-3">
                       <div class="font-semibold text-[var(--foreground)]">${ev.event_name}</div>
@@ -1637,7 +2086,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       }
     }
 
-    let collapsedWinnerEvents = new Set();
+    let collapsedWinnerEvents = new Set(DASHBOARD_DATA.events.map(e => e.event_slug));
 
     function toggleWinnerEvent(slug) {
       if (collapsedWinnerEvents.has(slug)) {
@@ -1917,9 +2366,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     function renderCountryJoiners() {
       const { isAll, stats } = getActiveContext();
       const evIdx = isAll ? null : DASHBOARD_DATA.event_lookup.findIndex(e => e.slug === selectedEventSlug);
-      const rows = evIdx === null
+      const rows = (evIdx === null
         ? DASHBOARD_DATA.runners
-        : DASHBOARD_DATA.runners.filter(r => r[0] === evIdx);
+        : DASHBOARD_DATA.runners.filter(r => r[0] === evIdx)
+      ).filter(runnerPassesGlobal);
 
       const total = rows.length;
       const counts = {};
@@ -2106,7 +2556,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (!container || !DASHBOARD_DATA.double_summary) return;
       const keys = ['ALL', 'HM_FM', 'HM_10K', '5K_FM', '5K_10K'];
       container.innerHTML = keys.map(k => {
-        const st = DASHBOARD_DATA.double_summary[k] || { reg: 0, reg_m: 0, reg_f: 0, fin_both: 0, fin_m: 0, fin_f: 0 };
+        const st = getDoubleSummary()[k] || { reg: 0, reg_m: 0, reg_f: 0, fin_both: 0, fin_m: 0, fin_f: 0 };
         const meta = DOUBLE_COMBO_META[k];
         const active = doubleComboFilter === k;
         const pct = st.reg ? ((st.fin_both * 100) / st.reg).toFixed(1) : '0.0';
@@ -2168,6 +2618,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const combo = p[2];
         const bothFin = p[3] === 1;
 
+        if (!runnerPassesGlobal(r1) && !runnerPassesGlobal(r2)) return false;
         if (doubleComboFilter !== 'ALL' && combo !== doubleComboFilter) return false;
         if (doubleStatusFilter === 'BOTH_FINISHED' && !bothFin) return false;
         if (doubleStatusFilter === 'INCOMPLETE' && bothFin) return false;
@@ -2196,6 +2647,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       runnerCategoryFilter = 'ALL';
       runnerGenderFilter = 'ALL';
       runnerStatusFilter = 'ALL';
+      runnerRemarkFilter = 'ALL';
+      runnerClassFilter = 'ALL';
       activeBucketFilter = null;
       updateBucketFilterBadge();
       document.getElementById('runnerSearchInput').value = bibNo;
@@ -2203,6 +2656,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       document.getElementById('runnerCategorySelect').value = 'ALL';
       document.getElementById('runnerGenderSelect').value = 'ALL';
       document.getElementById('runnerStatusSelect').value = 'ALL';
+      document.getElementById('runnerRemarkSelect').value = 'ALL';
+      document.getElementById('runnerClassSelect').value = 'ALL';
       filterRunnersList();
       if (filteredRunners.length > 0) {
         showRunnerDetail(0);
@@ -2358,6 +2813,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       runnerStatusFilter = e.target.value;
       filterRunnersList();
     });
+    document.getElementById('runnerRemarkSelect').addEventListener('change', e => {
+      runnerRemarkFilter = e.target.value;
+      filterRunnersList();
+    });
+    document.getElementById('runnerClassSelect').addEventListener('change', e => {
+      runnerClassFilter = e.target.value;
+      filterRunnersList();
+    });
     document.getElementById('runnerPageSizeSelect').addEventListener('change', e => {
       runnerPageSize = Number(e.target.value);
       runnerPage = 1;
@@ -2382,6 +2845,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       runnerCategoryFilter = 'ALL';
       runnerGenderFilter = 'ALL';
       runnerStatusFilter = 'ALL';
+      runnerRemarkFilter = 'ALL';
+      runnerClassFilter = 'ALL';
       activeBucketFilter = null;
       updateBucketFilterBadge();
       renderStatusAndRightPanel();
@@ -2390,6 +2855,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       document.getElementById('runnerCategorySelect').value = 'ALL';
       document.getElementById('runnerGenderSelect').value = 'ALL';
       document.getElementById('runnerStatusSelect').value = 'ALL';
+      document.getElementById('runnerRemarkSelect').value = 'ALL';
+      document.getElementById('runnerClassSelect').value = 'ALL';
       document.getElementById('runnerDetailDrawer').classList.add('hidden');
       filterRunnersList();
     });
@@ -2525,6 +2992,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }, { passive: true });
 
     initRunnerFilterOptions();
+    renderGlobalFilterBar();
     renderAll();
     filterRunnersList();
     filterDoubleRunnersList();
