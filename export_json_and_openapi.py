@@ -106,6 +106,29 @@ def parse_position_and_status(raw_pos: str, finish_time: str) -> tuple[int | Non
     return (None, "FINISHED" if finish_time else "UNKNOWN")
 
 
+def load_silaban_mapping() -> dict[str, dict[str, str]]:
+    csv_path = WORKSPACE / "KelasBersamaSIlaban.csv"
+    mapping: dict[str, dict[str, str]] = {}
+    if not csv_path.exists():
+        return mapping
+    with open(csv_path, "r", encoding="utf-8-sig") as f:
+        sample = f.read(1024)
+        f.seek(0)
+        delim = "\t" if "\t" in sample else ","
+        reader = csv.DictReader(f, delimiter=delim)
+        for row in reader:
+            bib = (row.get("BIB") or "").strip().upper()
+            if bib:
+                mapping[bib] = {
+                    "class": (row.get("Class") or "").strip(),
+                    "remark": (row.get("Remark") or "").strip(),
+                }
+    return mapping
+
+
+SILABAN_BY_BIB = load_silaban_mapping()
+
+
 def convert_csv_to_records(cfg: dict) -> list[dict]:
     csv_path = WORKSPACE / cfg["csv_file"]
     records = []
@@ -122,6 +145,8 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
                 splits[col] = val if val else None
 
             netto_time = compute_netto_time(splits, cfg["split_columns"]) if status == "FINISHED" else None
+            bib_no = (row.get("Bib No") or "").strip()
+            silaban_info = SILABAN_BY_BIB.get(bib_no.upper(), {})
 
             record = {
                 "event_slug": cfg["event_slug"],
@@ -129,7 +154,7 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
                 "race_day": cfg["race_day"],
                 "position": pos_int,
                 "status": status,
-                "bib_no": (row.get("Bib No") or "").strip(),
+                "bib_no": bib_no,
                 "name": (row.get("Name") or "").strip(),
                 "time": finish_time,
                 "bruto_time": finish_time,
@@ -137,6 +162,8 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
                 "category": (row.get("Category") or "").strip() or None,
                 "gender": (row.get("Gender") or "").strip() or None,
                 "country": (row.get("Country") or "").strip() or None,
+                "class": silaban_info.get("class") or None,
+                "remark": silaban_info.get("remark") or None,
                 "splits": splits,
             }
             records.append(record)
