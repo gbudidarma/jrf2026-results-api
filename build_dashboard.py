@@ -20,6 +20,7 @@ SILABAN_CLASS_ORDER = [
     "TT8",
     "TT9",
     "TTp",
+    "TT-Cheering",
 ]
 
 
