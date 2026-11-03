@@ -43,32 +43,29 @@
         <div id="eventTabs" class="flex flex-wrap items-center gap-2"></div>
       </div>
       <!-- Global Remark & Class Filter Bar (KelasBersamaSIlaban.csv joined by BIB No) -->
-      <div class="pt-4 border-t border-[var(--border)] flex flex-col gap-3">
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] shrink-0">Global Remark &amp; Class Filter</span>
-            <div id="globalRemarkTabs" class="inline-flex flex-wrap items-center gap-1.5"></div>
-            <div class="flex items-center gap-1.5">
-              <label for="globalClassSelect" class="text-xs font-medium text-[var(--muted-foreground)] ml-1">Class:</label>
-              <select
-                id="globalClassSelect"
-                onchange="selectGlobalClass(this.value)"
-                class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs font-semibold focus:outline-none focus:border-emerald-500"
-              >
-                <option value="ALL">All Classes</option>
-              </select>
-            </div>
-            <button
-              id="resetGlobalFilterBtn"
-              onclick="resetGlobalFilter()"
-              class="hidden px-2.5 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-500 text-xs font-semibold hover:bg-rose-500/20 transition"
+      <div class="pt-4 border-t border-[var(--border)] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)] shrink-0">Global Remark &amp; Class Filter</span>
+          <div id="globalRemarkTabs" class="inline-flex flex-wrap items-center gap-1.5"></div>
+          <div class="flex items-center gap-1.5">
+            <label for="globalClassSelect" class="text-xs font-medium text-[var(--muted-foreground)] ml-1">Class:</label>
+            <select
+              id="globalClassSelect"
+              onchange="selectGlobalClass(this.value)"
+              class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs font-semibold focus:outline-none focus:border-emerald-500"
             >
-              ✕ Reset Global Filter
-            </button>
+              <option value="ALL">All Classes</option>
+            </select>
           </div>
-          <div id="globalFilterActiveBadge" class="hidden text-xs font-medium px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500"></div>
+          <button
+            id="resetGlobalFilterBtn"
+            onclick="resetGlobalFilter()"
+            class="hidden px-2.5 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-500 text-xs font-semibold hover:bg-rose-500/20 transition"
+          >
+            ✕ Reset Global Filter
+          </button>
         </div>
-        <div id="globalClassPillsRow" class="flex flex-wrap items-center gap-1.5"></div>
+        <div id="globalFilterActiveBadge" class="hidden text-xs font-medium px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500"></div>
       </div>
     </div>
 
@@ -833,10 +830,9 @@
       const meta = DASHBOARD_DATA.silaban_meta || { total: 0, remarks: [], classes: [] };
       const tabs = document.getElementById('globalRemarkTabs');
       const select = document.getElementById('globalClassSelect');
-      const pills = document.getElementById('globalClassPillsRow');
       const badge = document.getElementById('globalFilterActiveBadge');
       const resetBtn = document.getElementById('resetGlobalFilterBtn');
-      if (!tabs || !select || !pills) return;
+      if (!tabs || !select) return;
 
       const baseCls = 'px-3 py-1.5 rounded-xl text-xs font-semibold transition border ';
       const activeCls = 'bg-emerald-600 text-white border-emerald-600 shadow-sm';
@@ -850,15 +846,6 @@
       select.innerHTML = `<option value="ALL">All Classes</option>` +
         meta.classes.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code)} (${fmtNum(c.count)})</option>`).join('');
       select.value = globalClass;
-
-      pills.innerHTML = meta.classes.map(c => {
-        const active = globalClass === c.code;
-        return `<button onclick="selectGlobalClass('${escapeHtml(c.code)}')" class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition border ${
-          active
-            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-            : 'bg-[var(--background)] text-[var(--muted-foreground)] border-[var(--border)] hover:text-[var(--foreground)] hover:border-amber-500/50'
-        }">${escapeHtml(c.code)} <span class="font-normal opacity-80">${fmtNum(c.count)}</span></button>`;
-      }).join('');
 
       const active = isGlobalFilterActive();
       resetBtn.classList.toggle('hidden', !active);
