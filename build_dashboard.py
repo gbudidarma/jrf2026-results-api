@@ -681,6 +681,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           >
             Double Category Runners
           </button>
+          <a
+            href='https://ko-fi.com/V7V2JM8S4'
+            target='_blank'
+            rel='noopener noreferrer'
+            class='hover:opacity-90 transition inline-flex items-center shrink-0 ml-1'
+            title='Support on Ko-fi'
+          >
+            <img height='32' style='border:0px;height:28px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' />
+          </a>
         </div>
         <div class="flex items-center gap-1.5 ml-auto">
           <button
@@ -699,7 +708,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           </button>
         </div>
       </nav>
-      <div id="stickyNavCollapsed" class="hidden inline-flex items-center gap-1.5 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-2.5 py-1.5 shadow-sm">
+      <div id="stickyNavCollapsed" class="hidden inline-flex items-center gap-2 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl px-2.5 py-1.5 shadow-sm">
+        <a href='https://ko-fi.com/V7V2JM8S4' target='_blank' rel='noopener noreferrer' class='hover:opacity-90 transition inline-flex items-center shrink-0' title='Support on Ko-fi'>
+          <img height='36' style='border:0px;height:28px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' />
+        </a>
         <button
           onclick="toggleNavMenu(false)"
           class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-semibold shadow-sm transition hover:bg-emerald-500"
@@ -1099,9 +1111,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <!-- Footer Copyright -->
-    <footer class="bg-[var(--card)] border border-[var(--border)] rounded-2xl px-6 py-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+    <footer class="bg-[var(--card)] border border-[var(--border)] rounded-2xl px-6 py-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--muted-foreground)]">
       <div>
         Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-semibold text-emerald-500 hover:underline">https://results.scorenow.co.id</a>
+      </div>
+      <div>
+        <a href='https://ko-fi.com/V7V2JM8S4' target='_blank' rel='noopener noreferrer' class='hover:opacity-90 transition inline-flex items-center' title='Support on Ko-fi'>
+          <img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' />
+        </a>
       </div>
       <div class="font-medium text-[var(--foreground)]">
         &copy; 2026 <a href="https://www.instagram.com/gbudidarma/" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-500 hover:underline">@gbudidarma</a> All rights reserved.

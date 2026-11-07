@@ -4,6 +4,7 @@
 [![Runners](https://img.shields.io/badge/Runners-36%2C306-0ea5e9?style=for-the-badge)](https://gbudidarma.github.io/jrf2026-results-api/)
 [![Finishers](https://img.shields.io/badge/Finishers-30%2C602-10b981?style=for-the-badge)](https://gbudidarma.github.io/jrf2026-results-api/)
 [![OpenAPI 3.0](https://img.shields.io/badge/API%20Spec-OpenAPI%203.0-6366f1?style=for-the-badge&logo=openapiinitiative)](openapi.json)
+[![Support on Ko-fi](https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-ff5e5b?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/V7V2JM8S4)
 
 Complete official race telemetry, interactive HTML analytics dashboard, and OpenAPI 3.0.0 JSON datasets for the **Jakarta Running Festival (Day 1 & Day 2)** — covering **36,306 registered runners**, **30,602 official finishers**, and **1,172 double-category (Day 1 + Day 2) runners** across all 4 distance categories (Marathon, Half Marathon, 10K, and 5K).
 
@@ -192,4 +193,12 @@ console.log(runner);
 ## Data Source, Author & Copyright
 
 - **Data Source:** [https://results.scorenow.co.id](https://results.scorenow.co.id)
-- **© 2026 [@gbudidarma](https://www.instagram.com/gbudidarma/) All rights reserved.**
+- **Author & Copyright:** **© 2026 [@gbudidarma](https://www.instagram.com/gbudidarma/) All rights reserved.**
+
+---
+
+## Support & Buy Me a Coffee
+
+If you found this race analytics dashboard, API datasets, or runner telemetry helpful, you can support the project here:
+
+<a href='https://ko-fi.com/V7V2JM8S4' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
