@@ -332,18 +332,40 @@
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-[var(--background)] border-b border-[var(--border)] text-[var(--muted-foreground)]">
-              <th class="py-3 px-3 font-semibold">Overall Pos / Status</th>
-              <th class="py-3 px-2 font-semibold">Cat Rank</th>
-              <th class="py-3 px-2.5 font-semibold">Bib No</th>
-              <th class="py-3 px-3 font-semibold">Runner Name</th>
-              <th class="py-3 px-2.5 font-semibold">Event</th>
-              <th class="py-3 px-2.5 font-semibold">Category</th>
-              <th class="py-3 px-2 font-semibold">Gender</th>
-              <th class="py-3 px-2.5 font-semibold">Country</th>
-              <th class="py-3 px-2.5 font-semibold text-right">Bruto Time</th>
-              <th class="py-3 px-2.5 font-semibold text-right">Netto Time</th>
-              <th class="py-3 px-2.5 font-semibold text-right">Avg Pace</th>
-              <th class="py-3 px-3 font-semibold">Checkpoint Splits</th>
+              <th onclick="setRunnerSort('pos')" class="py-3 px-3 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Overall Position">
+                <span class="inline-flex items-center gap-1">Overall Pos / Status <span id="sortIcon_pos" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('catRank')" class="py-3 px-2 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Category Rank">
+                <span class="inline-flex items-center gap-1">Cat Rank <span id="sortIcon_catRank" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('bib')" class="py-3 px-2.5 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Bib Number">
+                <span class="inline-flex items-center gap-1">Bib No <span id="sortIcon_bib" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('name')" class="py-3 px-3 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Runner Name">
+                <span class="inline-flex items-center gap-1">Runner Name <span id="sortIcon_name" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('event')" class="py-3 px-2.5 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Event">
+                <span class="inline-flex items-center gap-1">Event <span id="sortIcon_event" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('category')" class="py-3 px-2.5 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Category">
+                <span class="inline-flex items-center gap-1">Category <span id="sortIcon_category" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('gender')" class="py-3 px-2 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Gender">
+                <span class="inline-flex items-center gap-1">Gender <span id="sortIcon_gender" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('country')" class="py-3 px-2.5 font-semibold cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Country">
+                <span class="inline-flex items-center gap-1">Country <span id="sortIcon_country" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('bruto')" class="py-3 px-2.5 font-semibold text-right cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Bruto Finish Time">
+                <span class="inline-flex items-center justify-end gap-1 w-full">Bruto Time <span id="sortIcon_bruto" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('netto')" class="py-3 px-2.5 font-semibold text-right cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Netto Finish Time">
+                <span class="inline-flex items-center justify-end gap-1 w-full">Netto Time <span id="sortIcon_netto" class="text-xs">↕</span></span>
+              </th>
+              <th onclick="setRunnerSort('pace')" class="py-3 px-2.5 font-semibold text-right cursor-pointer select-none hover:text-[var(--foreground)] transition whitespace-nowrap group" title="Click to sort by Average Pace">
+                <span class="inline-flex items-center justify-end gap-1 w-full">Avg Pace <span id="sortIcon_pace" class="text-xs">↕</span></span>
+              </th>
+              <th class="py-3 px-3 font-semibold whitespace-nowrap">Checkpoint Splits</th>
             </tr>
           </thead>
           <tbody id="runnerTableBody" class="divide-y divide-[var(--border)]"></tbody>
@@ -599,6 +621,9 @@
     let runnerPageSize = 10;
     let filteredRunners = [];
     let activeBucketFilter = null;
+    let runnerSortCol = 'pos';
+    let runnerSortDir = 'asc';
+    const RUNNER_SORT_COLS = ['pos', 'catRank', 'bib', 'name', 'event', 'category', 'gender', 'country', 'bruto', 'netto', 'pace'];
 
     // ===== Global Remark & Class Filter (KelasBersamaSIlaban.csv joined by BIB No) =====
     let globalRemark = 'ALL';
@@ -1039,6 +1064,130 @@
       return `<span class="font-mono text-xs text-sky-500 font-semibold">#${fmtNum(catRank)}</span>`;
     }
 
+    function updateRunnerSortIcons() {
+      RUNNER_SORT_COLS.forEach(col => {
+        const icon = document.getElementById('sortIcon_' + col);
+        if (!icon) return;
+        if (runnerSortCol === col) {
+          icon.textContent = runnerSortDir === 'asc' ? '▲' : '▼';
+          icon.className = 'text-xs text-emerald-500 font-bold';
+        } else {
+          icon.textContent = '↕';
+          icon.className = 'text-xs opacity-30 group-hover:opacity-75';
+        }
+      });
+    }
+
+    function sortRunnersList() {
+      if (!runnerSortCol) return;
+      const dir = runnerSortDir === 'desc' ? -1 : 1;
+
+      filteredRunners.sort((a, b) => {
+        switch (runnerSortCol) {
+          case 'pos': {
+            const isFinA = a[2] === 'FINISHED' && a[1] !== null;
+            const isFinB = b[2] === 'FINISHED' && b[1] !== null;
+            if (isFinA && isFinB) return (a[1] - b[1]) * dir;
+            if (isFinA && !isFinB) return -1;
+            if (!isFinA && isFinB) return 1;
+            const sComp = (a[2] || '').localeCompare(b[2] || '');
+            if (sComp !== 0) return sComp * dir;
+            return (a[3] || '').localeCompare(b[3] || '', undefined, { numeric: true }) * dir;
+          }
+          case 'catRank': {
+            const hasRkA = a[12] !== null && a[12] !== undefined && a[12] > 0;
+            const hasRkB = b[12] !== null && b[12] !== undefined && b[12] > 0;
+            if (hasRkA && hasRkB) return (a[12] - b[12]) * dir;
+            if (hasRkA && !hasRkB) return -1;
+            if (!hasRkA && hasRkB) return 1;
+            return ((a[1] || 9999999) - (b[1] || 9999999)) * dir;
+          }
+          case 'bib':
+            return (a[3] || '').localeCompare(b[3] || '', undefined, { numeric: true, sensitivity: 'base' }) * dir;
+          case 'name': {
+            const hasA = Boolean(a[4] && a[4].trim());
+            const hasB = Boolean(b[4] && b[4].trim());
+            if (hasA && hasB) return a[4].trim().localeCompare(b[4].trim()) * dir;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          }
+          case 'event': {
+            const evA = DASHBOARD_DATA.event_lookup[a[0]] ? DASHBOARD_DATA.event_lookup[a[0]].name : '';
+            const evB = DASHBOARD_DATA.event_lookup[b[0]] ? DASHBOARD_DATA.event_lookup[b[0]].name : '';
+            const c = evA.localeCompare(evB);
+            if (c !== 0) return c * dir;
+            return ((a[1] || 9999999) - (b[1] || 9999999)) * dir;
+          }
+          case 'category': {
+            const hasA = Boolean(a[7] && a[7] !== 'Unknown');
+            const hasB = Boolean(b[7] && b[7] !== 'Unknown');
+            if (hasA && hasB) return a[7].localeCompare(b[7]) * dir;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          }
+          case 'gender':
+            return (a[8] || '').localeCompare(b[8] || '') * dir;
+          case 'country': {
+            const hasA = Boolean(a[9] && a[9] !== '-' && a[9] !== 'Unknown');
+            const hasB = Boolean(b[9] && b[9] !== '-' && b[9] !== 'Unknown');
+            if (hasA && hasB) return a[9].localeCompare(b[9]) * dir;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return 0;
+          }
+          case 'bruto': {
+            const secA = parseTimeSec(a[5]);
+            const secB = parseTimeSec(b[5]);
+            const hasA = secA !== null && a[2] === 'FINISHED';
+            const hasB = secB !== null && b[2] === 'FINISHED';
+            if (hasA && hasB) return (secA - secB) * dir;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return (a[3] || '').localeCompare(b[3] || '', undefined, { numeric: true }) * dir;
+          }
+          case 'netto': {
+            const secA = parseTimeSec(a[13]) || parseTimeSec(a[5]);
+            const secB = parseTimeSec(b[13]) || parseTimeSec(b[5]);
+            const hasA = secA !== null && a[2] === 'FINISHED';
+            const hasB = secB !== null && b[2] === 'FINISHED';
+            if (hasA && hasB) return (secA - secB) * dir;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return (a[3] || '').localeCompare(b[3] || '', undefined, { numeric: true }) * dir;
+          }
+          case 'pace': {
+            const pStrA = a[14] || a[6] || '';
+            const pStrB = b[14] || b[6] || '';
+            const secA = parseTimeSec(pStrA);
+            const secB = parseTimeSec(pStrB);
+            const hasA = secA !== null && a[2] === 'FINISHED';
+            const hasB = secB !== null && b[2] === 'FINISHED';
+            if (hasA && hasB) return (secA - secB) * dir;
+            if (hasA && !hasB) return -1;
+            if (!hasA && hasB) return 1;
+            return (a[3] || '').localeCompare(b[3] || '', undefined, { numeric: true }) * dir;
+          }
+          default:
+            return 0;
+        }
+      });
+    }
+
+    function setRunnerSort(col) {
+      if (runnerSortCol === col) {
+        runnerSortDir = runnerSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        runnerSortCol = col;
+        runnerSortDir = 'asc';
+      }
+      sortRunnersList();
+      runnerPage = 1;
+      updateRunnerSortIcons();
+      renderRunnerTable();
+    }
+
     function filterRunnersList() {
       const q = runnerQuery.trim().toLowerCase();
       const evIdx = runnerEventFilter === 'ALL' ? null : Number(runnerEventFilter);
@@ -1066,7 +1215,9 @@
         return true;
       });
 
+      sortRunnersList();
       runnerPage = 1;
+      updateRunnerSortIcons();
       renderRunnerTable();
     }
 
@@ -2064,6 +2215,8 @@
       runnerStatusFilter = 'ALL';
       runnerRemarkFilter = 'ALL';
       runnerClassFilter = 'ALL';
+      runnerSortCol = 'pos';
+      runnerSortDir = 'asc';
       activeBucketFilter = null;
       updateBucketFilterBadge();
       document.getElementById('runnerSearchInput').value = bibNo;
@@ -2262,6 +2415,8 @@
       runnerStatusFilter = 'ALL';
       runnerRemarkFilter = 'ALL';
       runnerClassFilter = 'ALL';
+      runnerSortCol = 'pos';
+      runnerSortDir = 'asc';
       activeBucketFilter = null;
       updateBucketFilterBadge();
       renderStatusAndRightPanel();
