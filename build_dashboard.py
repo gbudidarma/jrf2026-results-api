@@ -358,12 +358,17 @@ def compute_dashboard_data() -> dict:
     silaban_class_counts = Counter()
     silaban_remark_counts = Counter()
 
+    uids_by_event = {}
+    uids_path = WORKSPACE / "runner_uids.json"
+    if uids_path.exists():
+        uids_by_event = json.loads(uids_path.read_text(encoding="utf-8"))
+
     # Encode all 36,306 runners into a compact array for instant client-side search & pagination
     # Format per runner:
     # [0: event_idx, 1: pos_or_null, 2: status_str, 3: bib_no, 4: name, 5: bruto_time_str,
     #  6: bruto_pace_str, 7: category, 8: gender, 9: country, 10: splits_array, 11: is_podium (1/0),
     #  12: cat_rank, 13: netto_time_str, 14: netto_pace_str, 15: partner_runner_idx,
-    #  16: remark_str, 17: silaban_class_str]
+    #  16: remark_str, 17: silaban_class_str, 18: scorenow_aid_int]
     compact_runners = []
     for r in all_results:
         ev_idx = event_slug_to_idx[r["event_slug"]]
@@ -388,6 +393,8 @@ def compute_dashboard_data() -> dict:
             silaban_remark_counts[remark_str] += 1
         if class_str:
             silaban_class_counts[class_str] += 1
+        uid_str = uids_by_event.get(r["event_slug"], {}).get(bib) or ""
+        aid_int = int(uid_str.rsplit("-", 1)[-1]) if uid_str and "-" in uid_str else 0
 
         compact_runners.append(
             [
@@ -409,6 +416,7 @@ def compute_dashboard_data() -> dict:
                 -1,
                 remark_str,
                 class_str,
+                aid_int,
             ]
         )
 
@@ -1619,15 +1627,49 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .replace(/"/g, '&quot;');
     }
 
-    const BIB_SCORENOW_URLS = {
-      'K40123': 'https://results.scorenow.co.id/myresults.aspx?CId=19723&RId=338&EId=3&AId=792525',
-      'B20685': 'https://results.scorenow.co.id/myresults.aspx?CId=19723&RId=337&EId=1&AId=768671'
-    };
+    let UID_BY_EVENT_BIB = null;
+    let UID_BY_BIB = null;
+
+    function ensureUidLookup() {
+      if (UID_BY_EVENT_BIB) return;
+      UID_BY_EVENT_BIB = {};
+      UID_BY_BIB = {};
+      DASHBOARD_DATA.runners.forEach(r => {
+        const bib = (r[3] || '').trim().toUpperCase();
+        const aid = r[18];
+        if (bib && aid) {
+          const ev = DASHBOARD_DATA.event_lookup[r[0]];
+          const uid = `${ev.cid}-${ev.rid}-${ev.eid}-${aid}`;
+          UID_BY_EVENT_BIB[`${r[0]}:${bib}`] = uid;
+          UID_BY_EVENT_BIB[`${ev.slug}:${bib}`] = uid;
+          if (!UID_BY_BIB[bib]) {
+            UID_BY_BIB[bib] = uid;
+          }
+        }
+      });
+    }
+
+    function hasDirectScoreNowUid(bib, eventIdxOrSlug) {
+      ensureUidLookup();
+      const cleanBib = (bib || '').trim().toUpperCase();
+      if (eventIdxOrSlug !== undefined && eventIdxOrSlug !== null && UID_BY_EVENT_BIB[`${eventIdxOrSlug}:${cleanBib}`]) {
+        return true;
+      }
+      return !!UID_BY_BIB[cleanBib];
+    }
 
     function getScoreNowBibUrl(bib, eventIdxOrSlug) {
+      ensureUidLookup();
       const cleanBib = (bib || '').trim().toUpperCase();
-      if (BIB_SCORENOW_URLS[cleanBib]) {
-        return BIB_SCORENOW_URLS[cleanBib];
+      let uid = null;
+      if (eventIdxOrSlug !== undefined && eventIdxOrSlug !== null) {
+        uid = UID_BY_EVENT_BIB[`${eventIdxOrSlug}:${cleanBib}`];
+      }
+      if (!uid) {
+        uid = UID_BY_BIB[cleanBib];
+      }
+      if (uid) {
+        return `https://results.scorenow.co.id/myresults.aspx?uid=${uid}`;
       }
       let ev = null;
       if (typeof eventIdxOrSlug === 'number' && DASHBOARD_DATA.event_lookup[eventIdxOrSlug]) {
@@ -1644,7 +1686,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     function renderBibBadgeHtml(bib, eventIdxOrSlug) {
       if (!bib || bib === '-') return '';
       const url = getScoreNowBibUrl(bib, eventIdxOrSlug);
-      const isDirect = !!BIB_SCORENOW_URLS[(bib || '').trim().toUpperCase()];
+      const isDirect = hasDirectScoreNowUid(bib, eventIdxOrSlug);
       const title = isDirect
         ? 'Click to open official runner results on ScoreNow'
         : 'Click to open race results on ScoreNow';
@@ -1654,7 +1696,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     function renderBibTextLinkHtml(bib, eventIdxOrSlug, extraClass = '') {
       if (!bib || bib === '-') return '—';
       const url = getScoreNowBibUrl(bib, eventIdxOrSlug);
-      const isDirect = !!BIB_SCORENOW_URLS[(bib || '').trim().toUpperCase()];
+      const isDirect = hasDirectScoreNowUid(bib, eventIdxOrSlug);
       const title = isDirect
         ? 'Click to open official runner results on ScoreNow'
         : 'Click to open race results on ScoreNow';
@@ -2392,7 +2434,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             }">${c.gender}</span>
                           </td>
                           <td class="py-2.5 px-2 font-bold text-[var(--foreground)]">🏆 ${w ? w.name : '-'}</td>
-                          <td class="py-2.5 px-2 font-mono text-[var(--muted-foreground)]">${w ? w.bib_no : '-'}</td>
+                          <td class="py-2.5 px-2">${w ? renderBibTextLinkHtml(w.bib_no, ev.event_slug) : '-'}</td>
                           <td class="py-2.5 px-2 text-[var(--muted-foreground)]">${w ? w.country : '-'}</td>
                           <td class="py-2.5 px-2 text-right font-mono font-semibold text-[var(--foreground)]">${w ? w.time : '-'}</td>
                           <td class="py-2.5 px-2 text-right font-mono font-bold text-emerald-500">${w ? w.netto_time : '-'}</td>
@@ -2462,7 +2504,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                               <span class="font-semibold text-[var(--foreground)] truncate">${p.name}</span>
                             </div>
                             <div class="text-xs text-[var(--muted-foreground)] mt-0.5">
-                              Bib: ${renderBibTextLinkHtml(p.bib_no, stats.event_slug)} • ${p.country} ${p.overall_pos ? '• Overall #' + p.overall_pos : ''}
+                              Bib: ${renderBibTextLinkHtml(p.bib_no, ev.event_slug)} • ${p.country} ${p.overall_pos ? '• Overall #' + p.overall_pos : ''}
                             </div>
                           </div>
                           <div class="text-right shrink-0 space-y-0.5">

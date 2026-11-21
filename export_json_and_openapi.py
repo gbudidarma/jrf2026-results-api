@@ -129,8 +129,19 @@ def load_silaban_mapping() -> dict[str, dict[str, str]]:
 SILABAN_BY_BIB = load_silaban_mapping()
 
 
+def load_uid_mapping() -> dict[str, dict[str, str]]:
+    uid_path = WORKSPACE / "runner_uids.json"
+    if not uid_path.exists():
+        return {}
+    return json.loads(uid_path.read_text(encoding="utf-8"))
+
+
+UIDS_BY_EVENT = load_uid_mapping()
+
+
 def convert_csv_to_records(cfg: dict) -> list[dict]:
     csv_path = WORKSPACE / cfg["csv_file"]
+    ev_uids = UIDS_BY_EVENT.get(cfg["event_slug"], {})
     records = []
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -147,6 +158,12 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
             netto_time = compute_netto_time(splits, cfg["split_columns"]) if status == "FINISHED" else None
             bib_no = (row.get("Bib No") or "").strip()
             silaban_info = SILABAN_BY_BIB.get(bib_no.upper(), {})
+            uid = ev_uids.get(bib_no)
+            scorenow_url = (
+                f"https://results.scorenow.co.id/myresults.aspx?uid={uid}"
+                if uid
+                else f"https://results.scorenow.co.id/Results.aspx?CId={cfg['cid']}&RId={cfg['rid']}&EId={cfg['eid']}"
+            )
 
             record = {
                 "event_slug": cfg["event_slug"],
@@ -155,6 +172,8 @@ def convert_csv_to_records(cfg: dict) -> list[dict]:
                 "position": pos_int,
                 "status": status,
                 "bib_no": bib_no,
+                "uid": uid,
+                "scorenow_url": scorenow_url,
                 "name": (row.get("Name") or "").strip(),
                 "time": finish_time,
                 "bruto_time": finish_time,
