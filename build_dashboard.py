@@ -146,12 +146,20 @@ def compute_dashboard_data() -> dict:
     event_dist_by_idx = {}
     event_splits_by_idx = {}
 
+    EVENT_SCORE_CONFIG = {
+        "mybca_jakarta_half_marathon": {"cid": 19723, "rid": 337, "eid": 1},
+        "samsung_galaxy_5k": {"cid": 19723, "rid": 337, "eid": 2},
+        "hydroplus_marathon": {"cid": 19723, "rid": 338, "eid": 1},
+        "le_minerale_10k": {"cid": 19723, "rid": 338, "eid": 3},
+    }
+
     for idx, ev in enumerate(events_meta):
         slug = ev["event_slug"]
         clean_splits = [s for s in ev["split_checkpoints"] if s != "RTW"]
         event_slug_to_idx[slug] = idx
         event_dist_by_idx[idx] = float(ev["distance_km"])
         event_splits_by_idx[idx] = clean_splits
+        score_cfg = EVENT_SCORE_CONFIG.get(slug, {"cid": 19723, "rid": 337, "eid": 1})
         event_lookup.append(
             {
                 "slug": slug,
@@ -159,6 +167,9 @@ def compute_dashboard_data() -> dict:
                 "day": ev["race_day"],
                 "dist": float(ev["distance_km"]),
                 "splits": clean_splits,
+                "cid": score_cfg["cid"],
+                "rid": score_cfg["rid"],
+                "eid": score_cfg["eid"],
             }
         )
 
@@ -1608,6 +1619,48 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .replace(/"/g, '&quot;');
     }
 
+    const BIB_SCORENOW_URLS = {
+      'K40123': 'https://results.scorenow.co.id/myresults.aspx?CId=19723&RId=338&EId=3&AId=792525',
+      'B20685': 'https://results.scorenow.co.id/myresults.aspx?CId=19723&RId=337&EId=1&AId=768671'
+    };
+
+    function getScoreNowBibUrl(bib, eventIdxOrSlug) {
+      const cleanBib = (bib || '').trim().toUpperCase();
+      if (BIB_SCORENOW_URLS[cleanBib]) {
+        return BIB_SCORENOW_URLS[cleanBib];
+      }
+      let ev = null;
+      if (typeof eventIdxOrSlug === 'number' && DASHBOARD_DATA.event_lookup[eventIdxOrSlug]) {
+        ev = DASHBOARD_DATA.event_lookup[eventIdxOrSlug];
+      } else if (typeof eventIdxOrSlug === 'string') {
+        ev = DASHBOARD_DATA.event_lookup.find(e => e.slug === eventIdxOrSlug);
+      }
+      if (ev && ev.cid && ev.rid && ev.eid) {
+        return `https://results.scorenow.co.id/Results.aspx?CId=${ev.cid}&RId=${ev.rid}&EId=${ev.eid}`;
+      }
+      return 'https://results.scorenow.co.id';
+    }
+
+    function renderBibBadgeHtml(bib, eventIdxOrSlug) {
+      if (!bib || bib === '-') return '';
+      const url = getScoreNowBibUrl(bib, eventIdxOrSlug);
+      const isDirect = !!BIB_SCORENOW_URLS[(bib || '').trim().toUpperCase()];
+      const title = isDirect
+        ? 'Click to open official runner results on ScoreNow'
+        : 'Click to open race results on ScoreNow';
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] hover:border-emerald-500 hover:text-emerald-500 font-mono text-xs text-[var(--muted-foreground)] inline-flex items-center gap-1 transition" title="${title}">Bib: <strong class="font-mono text-[var(--foreground)] hover:text-emerald-500">${escapeHtml(bib)}</strong><span class="text-[10px] text-emerald-500">↗</span></a>`;
+    }
+
+    function renderBibTextLinkHtml(bib, eventIdxOrSlug, extraClass = '') {
+      if (!bib || bib === '-') return '—';
+      const url = getScoreNowBibUrl(bib, eventIdxOrSlug);
+      const isDirect = !!BIB_SCORENOW_URLS[(bib || '').trim().toUpperCase()];
+      const title = isDirect
+        ? 'Click to open official runner results on ScoreNow'
+        : 'Click to open race results on ScoreNow';
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="font-mono font-semibold text-emerald-500 hover:underline inline-flex items-center gap-0.5 ${extraClass}" title="${title}">${escapeHtml(bib)}<span class="text-[10px] opacity-75">↗</span></a>`;
+    }
+
     function getActiveContext() {
       const a = getAnalytics();
       if (selectedEventSlug === 'ALL') {
@@ -1852,7 +1905,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <div class="flex flex-wrap items-center gap-2">
                 <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">Double Category Runner (${escapeHtml(pev.day)})</span>
                 <span class="font-semibold text-[var(--foreground)]">${escapeHtml(pev.name)} (${pev.dist} KM)</span>
-                <span class="text-[var(--muted-foreground)]">• Bib: <strong class="font-mono text-[var(--foreground)]">${escapeHtml(pr[3])}</strong> • Name: <strong>${escapeHtml(pr[4])}</strong></span>
+                <span class="text-[var(--muted-foreground)]">• Bib: ${renderBibTextLinkHtml(pr[3], pr[0])} • Name: <strong>${escapeHtml(pr[4])}</strong></span>
               </div>
               <div class="flex items-center gap-3">
                 ${statusBadgeHtml(pr[1], pr[2])}
@@ -1873,7 +1926,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <span class="text-base font-bold text-[var(--foreground)]">${escapeHtml(r[4] || '(No Name)')}</span>
               ${r[16] ? `<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30 text-xs font-semibold">${escapeHtml(r[16])}${r[17] ? ' • ' + escapeHtml(r[17]) : ''}</span>` : ''}
               ${r[15] >= 0 ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-semibold">Double (Day 1+2)</span>` : ''}
-              <span class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] font-mono text-xs text-[var(--muted-foreground)]">Bib: ${escapeHtml(r[3])}</span>
+              ${renderBibBadgeHtml(r[3], r[0])}
             </div>
             <div class="text-xs text-[var(--muted-foreground)] mt-1">
               <strong>${escapeHtml(ev.name)}</strong> (${ev.dist} KM • ${escapeHtml(ev.day)}) • Category: <strong>${escapeHtml(r[7])}</strong> • Gender: <strong>${escapeHtml(r[8])}</strong> • Country: <strong>${escapeHtml(r[9])}</strong>
@@ -1948,7 +2001,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <tr onclick="showRunnerDetail(${globalFilteredIdx})" class="hover:bg-[var(--background)] cursor-pointer transition">
             <td class="py-2.5 px-3 whitespace-nowrap">${statusBadgeHtml(r[1], r[2])}</td>
             <td class="py-2.5 px-2 whitespace-nowrap">${catRankBadgeHtml(r[12])}</td>
-            <td class="py-2.5 px-2.5 font-mono font-semibold text-[var(--foreground)] whitespace-nowrap">${escapeHtml(r[3])}</td>
+            <td class="py-2.5 px-2.5 whitespace-nowrap">${renderBibTextLinkHtml(r[3], r[0])}</td>
             <td class="py-2.5 px-3 font-semibold text-[var(--foreground)]">
               <div class="flex flex-wrap items-center gap-1.5">
                 <span>${escapeHtml(r[4] || '—')}</span>
@@ -2409,7 +2462,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                               <span class="font-semibold text-[var(--foreground)] truncate">${p.name}</span>
                             </div>
                             <div class="text-xs text-[var(--muted-foreground)] mt-0.5">
-                              Bib: <span class="font-mono">${p.bib_no}</span> • ${p.country} ${p.overall_pos ? '• Overall #' + p.overall_pos : ''}
+                              Bib: ${renderBibTextLinkHtml(p.bib_no, stats.event_slug)} • ${p.country} ${p.overall_pos ? '• Overall #' + p.overall_pos : ''}
                             </div>
                           </div>
                           <div class="text-right shrink-0 space-y-0.5">
@@ -2904,7 +2957,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 ${statusBadgeHtml(r1[1], r1[2])}
                 <span class="font-semibold text-[var(--foreground)]">${escapeHtml(ev1.name)}</span>
               </div>
-              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Bib: <span class="font-mono font-semibold text-[var(--foreground)]">${escapeHtml(r1[3])}</span> • ${escapeHtml(r1[7])}</div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Bib: ${renderBibTextLinkHtml(r1[3], r1[0])} • ${escapeHtml(r1[7])}</div>
             </td>
             <td class="py-2.5 px-2.5 text-right font-mono whitespace-nowrap">
               <div class="text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${escapeHtml(r1[5] || '—')}</span></div>
@@ -2915,7 +2968,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 ${statusBadgeHtml(r2[1], r2[2])}
                 <span class="font-semibold text-[var(--foreground)]">${escapeHtml(ev2.name)}</span>
               </div>
-              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Bib: <span class="font-mono font-semibold text-[var(--foreground)]">${escapeHtml(r2[3])}</span> • ${escapeHtml(r2[7])}</div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Bib: ${renderBibTextLinkHtml(r2[3], r2[0])} • ${escapeHtml(r2[7])}</div>
             </td>
             <td class="py-2.5 px-2.5 text-right font-mono whitespace-nowrap">
               <div class="text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${escapeHtml(r2[5] || '—')}</span></div>
