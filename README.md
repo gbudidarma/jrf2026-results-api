@@ -1,8 +1,8 @@
 # Jakarta Running Festival (JRF) 2026 — Race Analytics Dashboard & Results API
 
-[![Live Demo](https://img.shields.io/badge/Live%20Dashboard-GitHub%20Pages-10b981?style=for-the-badge&logo=github)](https://gbudidarma.github.io/jrf2026-results-api/)
+[![Live Demo](https://img.shields.io/badge/Live%20Dashboard-GitHub%20Pages-2563eb?style=for-the-badge&logo=github)](https://gbudidarma.github.io/jrf2026-results-api/)
 [![Runners](https://img.shields.io/badge/Runners-36%2C306-0ea5e9?style=for-the-badge)](https://gbudidarma.github.io/jrf2026-results-api/)
-[![Finishers](https://img.shields.io/badge/Finishers-30%2C602-10b981?style=for-the-badge)](https://gbudidarma.github.io/jrf2026-results-api/)
+[![Finishers](https://img.shields.io/badge/Finishers-30%2C602-2563eb?style=for-the-badge)](https://gbudidarma.github.io/jrf2026-results-api/)
 [![OpenAPI 3.0](https://img.shields.io/badge/API%20Spec-OpenAPI%203.0-6366f1?style=for-the-badge&logo=openapiinitiative)](openapi.json)
 [![Support on Ko-fi](https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-ff5e5b?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/V7V2JM8S4)
 

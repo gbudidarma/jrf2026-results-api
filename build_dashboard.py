@@ -595,20 +595,42 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jakarta Running Festival — Race Analytics &amp; Runner Search Dashboard</title>
+  <title>Jakarta Running Festival 2026 — Race Analytics &amp; Runner Search Dashboard</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--background);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--muted-foreground);
+    }
+  </style>
 </head>
-<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6 transition-colors duration-150">
   <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header Banner -->
     <div id="topHeaderSection" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider mb-2">
+            Jakarta Running Festival 2026
+          </div>
           <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-[var(--foreground)]">
             Jakarta Running Festival — Race Analytics &amp; Results Explorer
           </h1>
           <p class="text-sm text-[var(--muted-foreground)] mt-1">
-            Finish rates, DNF / Cut-off / DNS percentages, Bruto &amp; Netto finish times, average pace metrics, category podiums, and full 36,306-runner search. Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-medium text-emerald-500 hover:underline">https://results.scorenow.co.id</a>
+            Finish rates, DNF / Cut-off / DNS percentages, Bruto &amp; Netto finish times, average pace metrics, category podiums, and full 36,306-runner search. Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-500 hover:text-blue-400 hover:underline">https://results.scorenow.co.id</a>
           </p>
         </div>
         <!-- Simple Light / Dark Mode Switcher -->
@@ -644,7 +666,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <select
               id="globalClassSelect"
               onchange="selectGlobalClass(this.value)"
-              class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs font-semibold focus:outline-none focus:border-emerald-500"
+              class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs font-semibold focus:outline-none focus:border-blue-500"
             >
               <option value="ALL">All Classes</option>
             </select>
@@ -657,7 +679,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             ✕ Reset Global Filter
           </button>
         </div>
-        <div id="globalFilterActiveBadge" class="hidden text-xs font-medium px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500"></div>
+        <div id="globalFilterActiveBadge" class="hidden text-xs font-medium px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400"></div>
       </div>
     </div>
 
@@ -668,7 +690,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <button
             data-nav-target="overviewSection"
             onclick="scrollToSection('overviewSection')"
-            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow-sm"
+            class="nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm"
           >
             Overview &amp; Pace
           </button>
@@ -733,7 +755,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </a>
         <button
           onclick="toggleNavMenu(false)"
-          class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-semibold shadow-sm transition hover:bg-emerald-500"
+          class="px-2.5 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold shadow-sm transition hover:bg-blue-500"
         >
           Menu
         </button>
@@ -782,7 +804,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div>
           <div class="flex flex-wrap items-center gap-2">
             <h2 id="countrySectionTitle" class="text-lg font-bold text-[var(--foreground)]">Country Joiners — Participant Nationality Breakdown</h2>
-            <span id="countryTotalBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500"></span>
+            <span id="countryTotalBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400"></span>
           </div>
           <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
             Distribution of registered runners by country (Overall Domestic vs International + Top International Countries Pie Chart) — click any country to filter the runner table
@@ -837,7 +859,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div>
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="text-lg font-bold text-[var(--foreground)]">All-Events Race Results — All Runners (With Podium)</h2>
-            <span id="runnerResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500">36,306 runners</span>
+            <span id="runnerResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400">36,306 runners</span>
             <span id="activeBucketFilterBadge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/15 text-sky-500 border border-sky-500/30"></span>
             <span class="px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)]">Includes All Podium Winners &amp; General Field</span>
           </div>
@@ -861,7 +883,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             id="runnerSearchInput"
             type="text"
             placeholder="e.g. KIPRONO, A14328, ROBI, Indonesia..."
-            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:border-emerald-500"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:border-blue-500"
           />
         </div>
         <div>
@@ -929,7 +951,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
 
       <!-- Selected Runner Split Detail Drawer (shown when a runner row is clicked) -->
-      <div id="runnerDetailDrawer" class="hidden rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4 space-y-3"></div>
+      <div id="runnerDetailDrawer" class="hidden rounded-xl border border-blue-500/40 bg-blue-500/5 p-4 space-y-3"></div>
 
       <!-- Detailed Runner Table -->
       <div class="overflow-x-auto border border-[var(--border)] rounded-xl">
@@ -1013,7 +1035,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div>
           <div class="flex flex-wrap items-center gap-2">
             <h2 class="text-lg font-bold text-[var(--foreground)]">Double Category Runners — Day 1 &amp; Day 2 Multi-Event Tracker</h2>
-            <span id="doubleResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500"></span>
+            <span id="doubleResultCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400"></span>
             <span id="doubleGenderSummaryBadge" class="inline-flex flex-wrap items-center gap-1.5 text-xs"></span>
           </div>
           <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
@@ -1039,7 +1061,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             id="doubleSearchInput"
             type="text"
             placeholder="Search by runner name, bib number, or country..."
-            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:border-emerald-500"
+            class="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] text-xs focus:outline-none focus:border-blue-500"
           />
         </div>
         <div>
@@ -1132,10 +1154,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- Footer Copyright -->
     <footer class="bg-[var(--card)] border border-[var(--border)] rounded-2xl px-6 py-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
       <div>
-        Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-semibold text-emerald-500 hover:underline">https://results.scorenow.co.id</a>
+        Data from <a href="https://results.scorenow.co.id" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-500 hover:text-blue-400 hover:underline">https://results.scorenow.co.id</a>
       </div>
       <div class="font-medium text-[var(--foreground)]">
-        &copy; 2026 <a href="https://www.instagram.com/gbudidarma/" target="_blank" rel="noopener noreferrer" class="font-bold text-emerald-500 hover:underline">@gbudidarma</a> All rights reserved.
+        &copy; 2026 <a href="https://www.instagram.com/gbudidarma/" target="_blank" rel="noopener noreferrer" class="font-bold text-blue-500 hover:text-blue-400 hover:underline">@gbudidarma</a> All rights reserved.
       </div>
     </footer>
 
@@ -1144,22 +1166,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <script>
     const THEME_PALETTES = {
       dark: {
-        '--background': '#0b0f19',
-        '--card': '#111827',
-        '--foreground': '#f9fafb',
-        '--muted-foreground': '#9ca3af',
-        '--border': '#1f2937',
-        '--primary': '#10b981',
-        '--secondary': '#1e293b'
+        '--background': '#09090b',
+        '--card': '#121215',
+        '--foreground': '#f4f4f5',
+        '--muted-foreground': '#a1a1aa',
+        '--border': '#27272a',
+        '--primary': '#3b82f6',
+        '--secondary': '#18181b'
       },
       light: {
         '--background': '#f8fafc',
         '--card': '#ffffff',
-        '--foreground': '#0f172a',
-        '--muted-foreground': '#64748b',
-        '--border': '#e2e8f0',
-        '--primary': '#059669',
-        '--secondary': '#f1f5f9'
+        '--foreground': '#09090b',
+        '--muted-foreground': '#52525b',
+        '--border': '#e4e4e7',
+        '--primary': '#2563eb',
+        '--secondary': '#f4f4f5'
       }
     };
 
@@ -1185,10 +1207,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const darkBtn = document.getElementById('themeDarkBtn');
       if (!lightBtn || !darkBtn) return;
       if (currentTheme === 'light') {
-        lightBtn.className = 'px-3 py-1 rounded-md text-xs font-semibold transition bg-emerald-600 text-white shadow-sm';
+        lightBtn.className = 'px-3 py-1 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
         darkBtn.className = 'px-3 py-1 rounded-md text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
       } else {
-        darkBtn.className = 'px-3 py-1 rounded-md text-xs font-semibold transition bg-emerald-600 text-white shadow-sm';
+        darkBtn.className = 'px-3 py-1 rounded-md text-xs font-semibold transition bg-blue-600 text-white shadow-sm';
         lightBtn.className = 'px-3 py-1 rounded-md text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
       }
     }
@@ -1464,8 +1486,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (!tabs || !select) return;
 
       const baseCls = 'px-3 py-1.5 rounded-xl text-xs font-semibold transition border ';
-      const activeCls = 'bg-emerald-600 text-white border-emerald-600 shadow-sm';
-      const idleCls = 'bg-[var(--background)] text-[var(--foreground)] border-[var(--border)] hover:border-emerald-500/50';
+      const activeCls = 'bg-blue-600 text-white border-blue-600 shadow-sm';
+      const idleCls = 'bg-[var(--background)] text-[var(--foreground)] border-[var(--border)] hover:border-blue-500/50';
       tabs.innerHTML =
         `<button onclick="selectGlobalRemark('ALL')" class="${baseCls}${globalRemark === 'ALL' ? activeCls : idleCls}">All Runners</button>` +
         meta.remarks.map((rm, i) =>
@@ -1690,7 +1712,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const title = isDirect
         ? 'Click to open official runner results on ScoreNow'
         : 'Click to open race results on ScoreNow';
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] hover:border-emerald-500 hover:text-emerald-500 font-mono text-xs text-[var(--muted-foreground)] inline-flex items-center gap-1 transition" title="${title}">Bib: <strong class="font-mono text-[var(--foreground)] hover:text-emerald-500">${escapeHtml(bib)}</strong><span class="text-[10px] text-emerald-500">↗</span></a>`;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] hover:border-blue-500 hover:text-blue-400 font-mono text-xs text-[var(--muted-foreground)] inline-flex items-center gap-1 transition" title="${title}">Bib: <strong class="font-mono text-[var(--foreground)] hover:text-blue-400">${escapeHtml(bib)}</strong><span class="text-[10px] text-blue-400">↗</span></a>`;
     }
 
     function renderBibTextLinkHtml(bib, eventIdxOrSlug, extraClass = '') {
@@ -1700,7 +1722,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const title = isDirect
         ? 'Click to open official runner results on ScoreNow'
         : 'Click to open race results on ScoreNow';
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="font-mono font-semibold text-emerald-500 hover:underline inline-flex items-center gap-0.5 ${extraClass}" title="${title}">${escapeHtml(bib)}<span class="text-[10px] opacity-75">↗</span></a>`;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="font-mono font-semibold text-blue-500 hover:text-blue-400 hover:underline inline-flex items-center gap-0.5 ${extraClass}" title="${title}">${escapeHtml(bib)}<span class="text-[10px] opacity-75">↗</span></a>`;
     }
 
     function getActiveContext() {
@@ -1739,7 +1761,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (!catRank) return '<span class="text-[var(--muted-foreground)]">—</span>';
       if (catRank <= 3) {
         const medal = catRank === 1 ? '🥇 ' : catRank === 2 ? '🥈 ' : '🥉 ';
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 font-bold">${medal}#${fmtNum(catRank)}</span>`;
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono bg-blue-500/15 text-blue-400 border border-blue-500/30 font-bold">${medal}#${fmtNum(catRank)}</span>`;
       }
       return `<span class="font-mono text-xs text-sky-500 font-semibold">#${fmtNum(catRank)}</span>`;
     }
@@ -1750,7 +1772,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         if (!icon) return;
         if (runnerSortCol === col) {
           icon.textContent = runnerSortDir === 'asc' ? '▲' : '▼';
-          icon.className = 'text-xs text-emerald-500 font-bold';
+          icon.className = 'text-xs text-blue-400 font-bold';
         } else {
           icon.textContent = '↕';
           icon.className = 'text-xs opacity-30 group-hover:opacity-75';
@@ -1905,7 +1927,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (status === 'FINISHED' && pos !== null) {
         const medal = pos === 1 ? '🥇 ' : pos === 2 ? '🥈 ' : pos === 3 ? '🥉 ' : '#';
         const cls = pos <= 3
-          ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 font-bold'
+          ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30 font-bold'
           : 'bg-[var(--background)] text-[var(--foreground)] border border-[var(--border)] font-semibold';
         return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono ${cls}">${medal}${fmtNum(pos)}</span>`;
       }
@@ -1943,16 +1965,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         if (pr) {
           const pev = DASHBOARD_DATA.event_lookup[pr[0]];
           partnerBannerHtml = `
-            <div class="p-3 rounded-xl bg-[var(--card)] border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="p-3 rounded-xl bg-[var(--card)] border border-blue-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 font-bold">Double Category Runner (${escapeHtml(pev.day)})</span>
+                <span class="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 font-bold">Double Category Runner (${escapeHtml(pev.day)})</span>
                 <span class="font-semibold text-[var(--foreground)]">${escapeHtml(pev.name)} (${pev.dist} KM)</span>
                 <span class="text-[var(--muted-foreground)]">• Bib: ${renderBibTextLinkHtml(pr[3], pr[0])} • Name: <strong>${escapeHtml(pr[4])}</strong></span>
               </div>
               <div class="flex items-center gap-3">
                 ${statusBadgeHtml(pr[1], pr[2])}
                 <span class="font-mono text-[var(--muted-foreground)]">Bruto: <strong class="text-[var(--foreground)]">${escapeHtml(pr[5] || '—')}</strong></span>
-                <span class="font-mono text-emerald-500">Netto: <strong>${escapeHtml(pr[13] || '—')}</strong></span>
+                <span class="font-mono text-blue-400">Netto: <strong>${escapeHtml(pr[13] || '—')}</strong></span>
               </div>
             </div>
           `;
@@ -1967,7 +1989,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               ${r[12] ? `<span class="px-2 py-0.5 rounded bg-sky-500/10 text-sky-500 border border-sky-500/30 font-mono text-xs font-semibold">Cat Rank #${fmtNum(r[12])}</span>` : ''}
               <span class="text-base font-bold text-[var(--foreground)]">${escapeHtml(r[4] || '(No Name)')}</span>
               ${r[16] ? `<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/30 text-xs font-semibold">${escapeHtml(r[16])}${r[17] ? ' • ' + escapeHtml(r[17]) : ''}</span>` : ''}
-              ${r[15] >= 0 ? `<span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-semibold">Double (Day 1+2)</span>` : ''}
+              ${r[15] >= 0 ? `<span class="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 text-xs font-semibold">Double (Day 1+2)</span>` : ''}
               ${renderBibBadgeHtml(r[3], r[0])}
             </div>
             <div class="text-xs text-[var(--muted-foreground)] mt-1">
@@ -1979,9 +2001,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <div class="text-xs text-[var(--muted-foreground)]">Bruto Finish Time</div>
               <div class="text-sm font-mono font-bold text-[var(--foreground)]">${escapeHtml(r[5] || '—')} ${r[6] ? `<span class="text-xs font-normal text-[var(--muted-foreground)]">(${escapeHtml(r[6])} /km)</span>` : ''}</div>
             </div>
-            <div class="text-right px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-              <div class="text-xs text-emerald-500 font-medium">Netto Finish Time (Splits)</div>
-              <div class="text-sm font-mono font-bold text-emerald-500">${escapeHtml(r[13] || '—')} ${r[14] ? `<span class="text-xs font-normal text-sky-500">(${escapeHtml(r[14])} /km)</span>` : ''}</div>
+            <div class="text-right px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30">
+              <div class="text-xs text-blue-400 font-medium">Netto Finish Time (Splits)</div>
+              <div class="text-sm font-mono font-bold text-blue-400">${escapeHtml(r[13] || '—')} ${r[14] ? `<span class="text-xs font-normal text-sky-500">(${escapeHtml(r[14])} /km)</span>` : ''}</div>
             </div>
             <button
               onclick="document.getElementById('runnerDetailDrawer').classList.add('hidden')"
@@ -1993,7 +2015,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         ${partnerBannerHtml}
         <div>
-          <div class="text-xs font-semibold text-[var(--muted-foreground)] mb-2">Checkpoint Split Times (Segment Intervals • Sum = Netto Finish Time: <span class="font-mono text-emerald-500">${escapeHtml(r[13] || '—')}</span>)</div>
+          <div class="text-xs font-semibold text-[var(--muted-foreground)] mb-2">Checkpoint Split Times (Segment Intervals • Sum = Netto Finish Time: <span class="font-mono text-blue-400">${escapeHtml(r[13] || '—')}</span>)</div>
           <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">${splitsHtml}</div>
         </div>
       `;
@@ -2036,7 +2058,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           .map((lbl, i) => (r[10][i] ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--background)] border border-[var(--border)] font-mono text-xs"><span class="text-[var(--muted-foreground)]">${escapeHtml(lbl)}:</span>${escapeHtml(r[10][i])}</span>` : ''))
           .filter(Boolean);
         const splitsPreview = nonEmptySplits.length
-          ? nonEmptySplits.slice(0, 4).join(' ') + (nonEmptySplits.length > 4 ? ` <span class="text-xs text-emerald-500 font-medium">+${nonEmptySplits.length - 4} more</span>` : '')
+          ? nonEmptySplits.slice(0, 4).join(' ') + (nonEmptySplits.length > 4 ? ` <span class="text-xs text-blue-400 font-medium">+${nonEmptySplits.length - 4} more</span>` : '')
           : '<span class="text-[var(--muted-foreground)]">—</span>';
 
         return `
@@ -2048,7 +2070,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <div class="flex flex-wrap items-center gap-1.5">
                 <span>${escapeHtml(r[4] || '—')}</span>
                 ${classBadgeHtml(r)}
-                ${r[15] >= 0 ? `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-xs font-medium">Double</span>` : ''}
+                ${r[15] >= 0 ? `<span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30 text-xs font-medium">Double</span>` : ''}
               </div>
             </td>
             <td class="py-2.5 px-2.5 whitespace-nowrap">
@@ -2062,7 +2084,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </td>
             <td class="py-2.5 px-2.5 text-[var(--muted-foreground)] whitespace-nowrap">${escapeHtml(r[9])}</td>
             <td class="py-2.5 px-2.5 text-right font-mono font-semibold text-[var(--foreground)] whitespace-nowrap">${escapeHtml(r[5] || '—')}</td>
-            <td class="py-2.5 px-2.5 text-right font-mono font-bold text-emerald-500 whitespace-nowrap">${escapeHtml(r[13] || '—')}</td>
+            <td class="py-2.5 px-2.5 text-right font-mono font-bold text-blue-400 whitespace-nowrap">${escapeHtml(r[13] || '—')}</td>
             <td class="py-2.5 px-2.5 text-right font-mono text-sky-500 whitespace-nowrap">${r[14] ? `${escapeHtml(r[14])} /km` : '—'}</td>
             <td class="py-2.5 px-3"><div class="flex flex-wrap gap-1">${splitsPreview}</div></td>
           </tr>
@@ -2088,8 +2110,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             onclick="selectEvent('${t.slug}')"
             class="px-3.5 py-2 rounded-xl text-xs font-semibold transition border ${
               active
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                : 'bg-[var(--background)] text-[var(--foreground)] border-[var(--border)] hover:border-emerald-500/50'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-[var(--background)] text-[var(--foreground)] border-[var(--border)] hover:border-blue-500/50'
             }"
           >
             ${t.label}
@@ -2108,8 +2130,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           value: `${stats.finished_pct}%`,
           sub: `${fmtNum(stats.finished)} of ${fmtNum(stats.total)} runners`,
           badge: 'Official Finishers',
-          color: 'text-emerald-500',
-          barColor: 'bg-emerald-500',
+          color: 'text-blue-400',
+          barColor: 'bg-blue-500',
           pct: stats.finished_pct
         },
         {
@@ -2173,7 +2195,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const paceGenderCards = document.getElementById('paceGenderCards');
 
       const segments = [
-        { label: 'Finished', count: stats.finished, pct: stats.finished_pct, color: 'bg-emerald-500', dot: 'bg-emerald-500' },
+        { label: 'Finished', count: stats.finished, pct: stats.finished_pct, color: 'bg-blue-500', dot: 'bg-blue-500' },
         { label: 'DNF (Stopped)', count: stats.dnf, pct: stats.dnf_pct, color: 'bg-amber-500', dot: 'bg-amber-500' },
         { label: 'CUT (Over Time Limit)', count: stats.cut, pct: stats.cut_pct, color: 'bg-orange-500', dot: 'bg-orange-500' },
         { label: 'DNS (Did Not Start)', count: stats.dns, pct: stats.dns_pct, color: 'bg-rose-500', dot: 'bg-rose-500' },
@@ -2244,12 +2266,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <tr class="border-b border-[var(--border)] text-xs text-[var(--muted-foreground)]">
                   <th class="py-2.5 pr-3 font-semibold">Event</th>
                   <th class="py-2.5 px-2 font-semibold text-right">Total</th>
-                  <th class="py-2.5 px-2 font-semibold text-right text-emerald-500">Finish %</th>
+                  <th class="py-2.5 px-2 font-semibold text-right text-blue-400">Finish %</th>
                   <th class="py-2.5 px-2 font-semibold text-right text-amber-500">DNF %</th>
                   <th class="py-2.5 px-2 font-semibold text-right text-orange-500">CUT %</th>
                   <th class="py-2.5 px-2 font-semibold text-right text-rose-500">DNS %</th>
                   <th class="py-2.5 px-2 font-semibold text-right">Avg Bruto</th>
-                  <th class="py-2.5 px-2 font-semibold text-right text-emerald-500">Avg Netto</th>
+                  <th class="py-2.5 px-2 font-semibold text-right text-blue-400">Avg Netto</th>
                   <th class="py-2.5 pl-2 font-semibold text-right text-sky-500">Avg Pace</th>
                 </tr>
               </thead>
@@ -2262,7 +2284,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     </td>
                     <td class="py-3 px-2 text-right font-medium">${fmtNum(ev.total)}</td>
                     <td class="py-3 px-2 text-right">
-                      <span class="font-semibold text-emerald-500">${ev.finished_pct}%</span>
+                      <span class="font-semibold text-blue-400">${ev.finished_pct}%</span>
                       <div class="text-xs text-[var(--muted-foreground)]">${fmtNum(ev.finished)}</div>
                     </td>
                     <td class="py-3 px-2 text-right">
@@ -2278,7 +2300,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                       <div class="text-xs text-[var(--muted-foreground)]">${fmtNum(ev.dns)}</div>
                     </td>
                     <td class="py-3 px-2 text-right font-mono font-medium text-[var(--foreground)]">${ev.avg_time}</td>
-                    <td class="py-3 px-2 text-right font-mono font-bold text-emerald-500">${ev.avg_netto_time}</td>
+                    <td class="py-3 px-2 text-right font-mono font-bold text-blue-400">${ev.avg_netto_time}</td>
                     <td class="py-3 pl-2 text-right font-mono font-semibold text-sky-500">${ev.avg_pace}</td>
                   </tr>
                 `).join('')}
@@ -2293,8 +2315,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const hasActiveBar = activeBucketFilter && activeBucketFilter.eventSlug === stats.event_slug;
         rightContent.innerHTML = `
           ${hasActiveBar ? `
-            <div class="flex items-center justify-between px-3 py-1.5 mb-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs">
-              <span class="font-medium text-emerald-500">Active Filter: <strong>${escapeHtml(activeBucketFilter.label)}</strong></span>
+            <div class="flex items-center justify-between px-3 py-1.5 mb-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs">
+              <span class="font-medium text-blue-400">Active Filter: <strong>${escapeHtml(activeBucketFilter.label)}</strong></span>
               <button onclick="clearBucketFilter()" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] font-medium hover:opacity-80">Clear Filter ✕</button>
             </div>
           ` : ''}
@@ -2302,11 +2324,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             ${stats.buckets.map((b, bIdx) => {
               const isSelected = hasActiveBar && activeBucketFilter.bucketIdx === bIdx;
               const rowCls = isSelected
-                ? 'bg-emerald-500/15 ring-1 ring-emerald-500 rounded-lg px-2 py-1'
+                ? 'bg-blue-500/15 ring-1 ring-blue-500 rounded-lg px-2 py-1'
                 : 'hover:bg-[var(--background)] rounded-lg px-2 py-1';
               const barColor = b.is_over_cot
                 ? (isSelected ? 'bg-amber-500' : 'bg-amber-500/80')
-                : (isSelected ? 'bg-emerald-500' : 'bg-emerald-500/80');
+                : (isSelected ? 'bg-blue-500' : 'bg-blue-500/80');
               const labelColor = b.is_over_cot ? 'text-amber-500 font-semibold' : 'text-[var(--foreground)] font-medium';
               return `
                 <div
@@ -2361,13 +2383,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       document.querySelectorAll('.gender-btn').forEach(btn => {
         const active = btn.dataset.gender === selectedGender;
         btn.className = `gender-btn px-3 py-1 rounded-md text-xs font-medium transition ${
-          active ? 'bg-emerald-600 text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          active ? 'bg-blue-600 text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
         }`;
       });
       document.querySelectorAll('.mode-btn').forEach(btn => {
         const active = btn.dataset.mode === selectedViewMode;
         btn.className = `mode-btn px-3 py-1 rounded-md text-xs font-medium transition ${
-          active ? 'bg-emerald-600 text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          active ? 'bg-blue-600 text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
         }`;
       });
 
@@ -2393,16 +2415,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <div class="space-y-3 mb-5 last:mb-0">
               <div
                 onclick="toggleWinnerEvent('${ev.event_slug}')"
-                class="flex flex-wrap items-center justify-between gap-2 bg-[var(--background)] px-4 py-2.5 rounded-xl border border-[var(--border)] hover:border-emerald-500/40 cursor-pointer select-none transition"
+                class="flex flex-wrap items-center justify-between gap-2 bg-[var(--background)] px-4 py-2.5 rounded-xl border border-[var(--border)] hover:border-blue-500/40 cursor-pointer select-none transition"
               >
                 <div class="flex items-center gap-2.5">
                   <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-[var(--card)] border border-[var(--border)] text-xs font-bold text-[var(--foreground)]">${isCollapsed ? '▶' : '▼'}</span>
                   <span class="text-sm font-bold text-[var(--foreground)]">${ev.event_name}</span>
-                  <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-semibold">${ev.distance_km} KM • ${ev.race_day}</span>
+                  <span class="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-semibold">${ev.distance_km} KM • ${ev.race_day}</span>
                   <span class="text-xs text-[var(--muted-foreground)]">(${filteredCats.length} categories)</span>
                 </div>
                 <div class="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                  <span>Finish Rate: <strong class="text-emerald-500">${ev.finished_pct}%</strong> • Avg Pace: <strong class="text-sky-500">${ev.avg_pace}</strong></span>
+                  <span>Finish Rate: <strong class="text-blue-400">${ev.finished_pct}%</strong> • Avg Pace: <strong class="text-sky-500">${ev.avg_pace}</strong></span>
                   <span class="px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] font-medium">${isCollapsed ? 'Expand' : 'Collapse'}</span>
                 </div>
               </div>
@@ -2437,7 +2459,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                           <td class="py-2.5 px-2">${w ? renderBibTextLinkHtml(w.bib_no, ev.event_slug) : '-'}</td>
                           <td class="py-2.5 px-2 text-[var(--muted-foreground)]">${w ? w.country : '-'}</td>
                           <td class="py-2.5 px-2 text-right font-mono font-semibold text-[var(--foreground)]">${w ? w.time : '-'}</td>
-                          <td class="py-2.5 px-2 text-right font-mono font-bold text-emerald-500">${w ? w.netto_time : '-'}</td>
+                          <td class="py-2.5 px-2 text-right font-mono font-bold text-blue-400">${w ? w.netto_time : '-'}</td>
                           <td class="py-2.5 px-2 text-right font-mono text-sky-500">${w ? w.netto_pace : '-'}</td>
                           <td class="py-2.5 px-2 text-right text-[var(--muted-foreground)]">${fmtNum(c.finishers_count)} / ${fmtNum(c.total_entered)} (${c.finish_pct}%)</td>
                           <td class="py-2.5 px-3 text-right font-mono text-[var(--muted-foreground)]">${c.avg_pace}</td>
@@ -2455,16 +2477,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <div class="space-y-4 mb-5 last:mb-0">
             <div
               onclick="toggleWinnerEvent('${ev.event_slug}')"
-              class="flex flex-wrap items-center justify-between gap-2 bg-[var(--background)] px-4 py-3 rounded-xl border border-[var(--border)] hover:border-emerald-500/40 cursor-pointer select-none transition"
+              class="flex flex-wrap items-center justify-between gap-2 bg-[var(--background)] px-4 py-3 rounded-xl border border-[var(--border)] hover:border-blue-500/40 cursor-pointer select-none transition"
             >
               <div class="flex items-center gap-2.5">
                 <span class="inline-flex items-center justify-center w-5 h-5 rounded bg-[var(--card)] border border-[var(--border)] text-xs font-bold text-[var(--foreground)]">${isCollapsed ? '▶' : '▼'}</span>
                 <span class="text-base font-bold text-[var(--foreground)]">${ev.event_name}</span>
-                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold">${ev.distance_km} KM • ${ev.race_day}</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-semibold">${ev.distance_km} KM • ${ev.race_day}</span>
                 <span class="text-xs text-[var(--muted-foreground)]">(${filteredCats.length} categories)</span>
               </div>
               <div class="flex flex-wrap items-center gap-4 text-xs text-[var(--muted-foreground)]">
-                <span>Finish: <strong class="text-emerald-500">${ev.finished_pct}%</strong> (${fmtNum(ev.finished)})</span>
+                <span>Finish: <strong class="text-blue-400">${ev.finished_pct}%</strong> (${fmtNum(ev.finished)})</span>
                 <span>DNF: <strong class="text-amber-500">${ev.dnf_pct}%</strong> (${fmtNum(ev.dnf)})</span>
                 <span>CUT: <strong class="text-orange-500">${ev.cut_pct}%</strong> (${fmtNum(ev.cut)})</span>
                 <span>DNS: <strong class="text-rose-500">${ev.dns_pct}%</strong> (${fmtNum(ev.dns)})</span>
@@ -2495,7 +2517,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                   <div class="space-y-2">
                     ${c.podium.map((p, idx) => {
                       const medals = ['🥇 1st', '🥈 2nd', '🥉 3rd'];
-                      const highlight = idx === 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-[var(--card)] border-[var(--border)]';
+                      const highlight = idx === 0 ? 'bg-blue-500/10 border-blue-500/30' : 'bg-[var(--card)] border-[var(--border)]';
                       return `
                         <div class="p-2.5 rounded-lg border ${highlight} flex items-center justify-between gap-2 text-xs">
                           <div class="min-w-0">
@@ -2509,7 +2531,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                           </div>
                           <div class="text-right shrink-0 space-y-0.5">
                             <div class="font-mono text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${p.time}</span></div>
-                            <div class="font-mono text-xs text-emerald-500">Netto: <span class="font-bold">${p.netto_time}</span></div>
+                            <div class="font-mono text-xs text-blue-400">Netto: <span class="font-bold">${p.netto_time}</span></div>
                             <div class="font-mono text-xs text-sky-500">${p.netto_pace}</div>
                           </div>
                         </div>
@@ -2547,7 +2569,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
 
     const PIE_COLORS = [
-      '#10b981', '#0ea5e9', '#f59e0b', '#ec4899', '#8b5cf6',
+      '#3b82f6', '#0ea5e9', '#f59e0b', '#ec4899', '#8b5cf6',
       '#ef4444', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#64748b'
     ];
 
@@ -2650,7 +2672,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
       // Pie 1: Domestic (Indonesia) vs International
       const overallSlices = [
-        { label: 'Indonesia', count: idnCount, pct: idnPct, color: '#10b981', clickable: true },
+        { label: 'Indonesia', count: idnCount, pct: idnPct, color: '#3b82f6', clickable: true },
         { label: 'International', count: intlKnownTotal, pct: intlPct, color: '#0ea5e9', clickable: false }
       ].filter(s => s.count > 0);
 
@@ -2677,7 +2699,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const pie2Html = buildPieSvg(topIntl, intlKnownTotal, fmtNum(intlKnownTotal), 'Foreign Joiners');
 
       const topTableRows = knownCountries.slice(0, 10).map((c, idx) => {
-        const badgeColor = c.country === 'Indonesia' ? '#10b981' : PIE_COLORS[idx % PIE_COLORS.length];
+        const badgeColor = c.country === 'Indonesia' ? '#3b82f6' : PIE_COLORS[idx % PIE_COLORS.length];
         return `
           <tr onclick="filterByCountry('${escapeHtml(c.country)}')" class="hover:bg-[var(--card)] cursor-pointer transition">
             <td class="py-1.5 px-2.5 text-xs font-mono text-[var(--muted-foreground)]">#${idx + 1}</td>
@@ -2688,7 +2710,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               </div>
             </td>
             <td class="py-1.5 px-2.5 text-xs text-right font-mono font-semibold text-[var(--foreground)]">${fmtNum(c.count)}</td>
-            <td class="py-1.5 px-2.5 text-xs text-right font-mono text-emerald-500">${c.pct.toFixed(2)}%</td>
+            <td class="py-1.5 px-2.5 text-xs text-right font-mono text-blue-400">${c.pct.toFixed(2)}%</td>
           </tr>
         `;
       }).join('');
@@ -2705,7 +2727,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           </div>
           <div class="w-full space-y-2 text-xs border-t border-[var(--border)] pt-3">
             <div onclick="filterByCountry('Indonesia')" class="flex items-center justify-between cursor-pointer hover:opacity-80">
-              <span class="flex items-center gap-2 font-medium text-[var(--foreground)]"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>Indonesia</span>
+              <span class="flex items-center gap-2 font-medium text-[var(--foreground)]"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>Indonesia</span>
               <span class="font-mono font-semibold text-[var(--foreground)]">${fmtNum(idnCount)} (${idnPct}%)</span>
             </div>
             <div class="flex items-center justify-between">
@@ -2817,14 +2839,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             onclick="selectDoubleCombo('${k}')"
             class="p-3.5 rounded-xl border cursor-pointer transition select-none flex flex-col justify-between ${
               active
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-[var(--background)] border-[var(--border)] hover:border-emerald-500/50'
+                ? 'bg-blue-500/10 border-blue-500 ring-1 ring-blue-500'
+                : 'bg-[var(--background)] border-[var(--border)] hover:border-blue-500/50'
             }"
           >
             <div>
               <div class="flex items-center justify-between gap-1.5">
                 <span class="text-xs font-bold text-[var(--foreground)]">${meta.title}</span>
-                <span class="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-[var(--card)] border border-[var(--border)] text-emerald-500">${meta.badge}</span>
+                <span class="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-[var(--card)] border border-[var(--border)] text-blue-400">${meta.badge}</span>
               </div>
               <div class="text-xs text-[var(--muted-foreground)] mt-0.5">${meta.sub}</div>
             </div>
@@ -2834,7 +2856,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                   <span class="text-lg font-bold text-[var(--foreground)]">${fmtNum(st.reg)}</span>
                   <span class="text-xs text-[var(--muted-foreground)] ml-1">runners</span>
                 </div>
-                <div class="text-xs text-emerald-500 font-semibold text-right">
+                <div class="text-xs text-blue-400 font-semibold text-right">
                   ${fmtNum(st.fin_both)} finished both (${pct}%)
                 </div>
               </div>
@@ -2991,7 +3013,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
               <div class="text-xs text-[var(--muted-foreground)] mt-0.5">${escapeHtml(r1[9])}</div>
             </td>
             <td class="py-2.5 px-2.5 whitespace-nowrap">
-              <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">${escapeHtml(meta.title)}</span>
+              <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">${escapeHtml(meta.title)}</span>
               <div class="text-xs font-mono text-[var(--muted-foreground)] mt-0.5">${escapeHtml(meta.dist)}</div>
             </td>
             <td onclick="inspectDoubleRunnerInMainTable('${escapeHtml(r1[3])}')" class="py-2.5 px-3 border-l border-[var(--border)] cursor-pointer hover:opacity-80" title="Click to inspect Day 1 splits">
@@ -3003,7 +3025,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </td>
             <td class="py-2.5 px-2.5 text-right font-mono whitespace-nowrap">
               <div class="text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${escapeHtml(r1[5] || '—')}</span></div>
-              <div class="text-xs text-emerald-500">Netto: <span class="font-bold">${escapeHtml(r1[13] || '—')}</span></div>
+              <div class="text-xs text-blue-400">Netto: <span class="font-bold">${escapeHtml(r1[13] || '—')}</span></div>
             </td>
             <td onclick="inspectDoubleRunnerInMainTable('${escapeHtml(r2[3])}')" class="py-2.5 px-3 border-l border-[var(--border)] cursor-pointer hover:opacity-80" title="Click to inspect Day 2 splits">
               <div class="flex items-center gap-1.5">
@@ -3014,11 +3036,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </td>
             <td class="py-2.5 px-2.5 text-right font-mono whitespace-nowrap">
               <div class="text-xs text-[var(--muted-foreground)]">Bruto: <span class="font-semibold text-[var(--foreground)]">${escapeHtml(r2[5] || '—')}</span></div>
-              <div class="text-xs text-emerald-500">Netto: <span class="font-bold">${escapeHtml(r2[13] || '—')}</span></div>
+              <div class="text-xs text-blue-400">Netto: <span class="font-bold">${escapeHtml(r2[13] || '—')}</span></div>
             </td>
             <td class="py-2.5 px-3 text-right font-mono whitespace-nowrap border-l border-[var(--border)]">
               ${bothFin ? `
-                <div class="font-bold text-emerald-500">${escapeHtml(combNetto)}</div>
+                <div class="font-bold text-blue-400">${escapeHtml(combNetto)}</div>
                 <div class="text-xs text-sky-500">${escapeHtml(combPace)}</div>
                 <div class="text-xs text-[var(--muted-foreground)]">Bruto: ${escapeHtml(combBruto)}</div>
               ` : '<span class="text-xs text-[var(--muted-foreground)]">Incomplete</span>'}
@@ -3192,7 +3214,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       document.querySelectorAll('.nav-jump-btn').forEach(btn => {
         const active = btn.dataset.navTarget === targetId;
         btn.className = active
-          ? 'nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-emerald-600 text-white shadow-sm'
+          ? 'nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow-sm'
           : 'nav-jump-btn px-3 py-1.5 rounded-lg text-xs font-medium transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)]';
       });
     }
